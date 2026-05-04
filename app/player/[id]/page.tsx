@@ -8,7 +8,7 @@ import { User } from '@supabase/supabase-js'
 
 interface Profile {
   id: string
-  name: string
+  full_name: string
   position: string
   city: string
   country: string
@@ -18,12 +18,13 @@ interface Profile {
 
 interface Match {
   id: string
-  date: string
-  opponent: string
-  score: string
+  played_at: string
+  opponent_team: string
+  score_us: number
+  score_them: number
   goals: number
   assists: number
-  minutes: number
+  minutes_played: number
   status: string
 }
 
@@ -68,10 +69,10 @@ export default function PlayerProfile() {
         .from('matches')
         .select('*')
         .eq('player_id', userId)
-        .order('date', { ascending: false })
+        .order('played_at', { ascending: false })
 
       if (matchesError) {
-        console.error('Error fetching matches:', matchesError)
+        setMatches([])
       } else {
         setMatches(matchesData || [])
       }
@@ -103,12 +104,12 @@ export default function PlayerProfile() {
   const totalMatches = approvedMatches.length
   const totalGoals = approvedMatches.reduce((sum, m) => sum + m.goals, 0)
   const totalAssists = approvedMatches.reduce((sum, m) => sum + m.assists, 0)
-  const totalMinutes = approvedMatches.reduce((sum, m) => sum + m.minutes, 0)
+  const totalMinutes = approvedMatches.reduce((sum, m) => sum + m.minutes_played, 0)
 
   // Last 5 matches
   const last5Matches = matches.slice(0, 5)
 
-  const avatarLetter = profile.name.charAt(0).toUpperCase()
+  const avatarLetter = profile?.full_name.charAt(0).toUpperCase()
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
@@ -142,7 +143,7 @@ export default function PlayerProfile() {
               </span>
             </div>
           )}
-          <h1 className="text-3xl font-bold mb-2">{profile.name}</h1>
+          <h1 className="text-3xl font-bold mb-2">{profile.full_name}</h1>
           <p className="text-gray-400 mb-6">
             {profile.position} • {profile.city}, {profile.country}
           </p>
@@ -186,11 +187,11 @@ export default function PlayerProfile() {
               <div key={match.id} className="bg-gray-800 p-4 rounded-lg">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <div className="font-medium">{new Date(match.date).toLocaleDateString('ru-RU')}</div>
-                    <div className="text-gray-400">vs {match.opponent}</div>
+                    <div className="font-medium">{new Date(match.played_at).toLocaleDateString('ru-RU')}</div>
+                    <div className="text-gray-400">vs {match.opponent_team}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold">{match.score}</div>
+                    <div className="text-xl font-bold">{match.score_us}:{match.score_them}</div>
                     <div className="text-sm text-gray-400">
                       {match.goals}G + {match.assists}A
                     </div>

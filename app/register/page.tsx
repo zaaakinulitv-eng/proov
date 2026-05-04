@@ -40,11 +40,13 @@ export default function Register() {
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
-            user_id: data.user.id,
+            id: data.user.id,
             full_name: formData.full_name,
             position: formData.position,
             city: formData.city,
             country: formData.country,
+            trust_score: 0,
+            is_founder_verified: false,
           })
 
         if (profileError) throw profileError

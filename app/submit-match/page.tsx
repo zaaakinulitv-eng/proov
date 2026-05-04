@@ -36,6 +36,23 @@ export default function SubmitMatch() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target
+    
+    // For minutes_played, allow only numbers 1-120 without auto-correction
+    if (name === 'minutes_played') {
+      if (value === '') {
+        setFormData({ ...formData, [name]: value })
+      } else {
+        const numValue = parseInt(value)
+        if (!isNaN(numValue) && numValue >= 1 && numValue <= 120) {
+          setFormData({ ...formData, [name]: value })
+        } else if (value.length === 1) {
+          // Allow user to type first digit
+          setFormData({ ...formData, [name]: value })
+        }
+      }
+      return
+    }
+    
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? checked : value
@@ -66,7 +83,7 @@ export default function SubmitMatch() {
       const { data: profile } = await supabase
         .from('profiles')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single()
 
       if (!profile) throw new Error('Профиль не найден')
@@ -265,9 +282,9 @@ export default function SubmitMatch() {
               value={formData.minutes_played}
               onChange={handleChange}
               min="1"
-              max="120"
               required
               className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-[#22c55e] focus:outline-none"
+              placeholder="1-120"
             />
           </div>
 

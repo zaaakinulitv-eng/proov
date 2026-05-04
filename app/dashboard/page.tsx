@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { User } from '@supabase/supabase-js'
 
 interface Profile {
   id: string
-  name: string
+  full_name: string
   position: string
   city: string
   country: string
@@ -17,12 +18,13 @@ interface Profile {
 
 interface Match {
   id: string
-  date: string
-  opponent: string
-  score: string
+  played_at: string
+  opponent_team: string
+  score_us: number
+  score_them: number
   goals: number
   assists: number
-  minutes: number
+  minutes_played: number
   status: string
   photo_url?: string
 }
@@ -32,6 +34,8 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [matches, setMatches] = useState<Match[]>([])
   const [loading, setLoading] = useState(true)
+
+  const router = useRouter()
 
   useEffect(() => {
     const getUser = async () => {
@@ -58,21 +62,21 @@ export default function Dashboard() {
 
       if (profileError) {
         console.error('Error fetching profile:', profileError)
-        setLoading(false)
-        return
+        // Profile not found, set to null
+        setProfile(null)
+      } else {
+        setProfile(profileData)
       }
-
-      setProfile(profileData)
 
       // Fetch matches
       const { data: matchesData, error: matchesError } = await supabase
         .from('matches')
         .select('*')
         .eq('player_id', user.id)
-        .order('date', { ascending: false })
+        .order('played_at', { ascending: false })
 
       if (matchesError) {
-        console.error('Error fetching matches:', matchesError)
+        setMatches([])
       } else {
         setMatches(matchesData || [])
       }
@@ -99,19 +103,34 @@ export default function Dashboard() {
     )
   }
 
-  if (!profile) return null
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Профиль не найден</h1>
+          <p className="text-gray-400 mb-6">Создайте свой профиль чтобы начать</p>
+          <Link
+            href="/register"
+            className="bg-[#22c55e] text-black px-6 py-3 rounded-lg font-medium hover:bg-[#16a34a] transition-colors inline-block"
+          >
+            Создать профиль
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   // Calculate stats from approved matches only
   const approvedMatches = matches.filter(m => m.status === 'approved')
   const totalMatches = approvedMatches.length
   const totalGoals = approvedMatches.reduce((sum, m) => sum + m.goals, 0)
   const totalAssists = approvedMatches.reduce((sum, m) => sum + m.assists, 0)
-  const totalMinutes = approvedMatches.reduce((sum, m) => sum + m.minutes, 0)
+  const totalMinutes = approvedMatches.reduce((sum, m) => sum + m.minutes_played, 0)
 
   // Last 5 matches
   const last5Matches = matches.slice(0, 5)
 
-  const avatarLetter = profile.name.charAt(0).toUpperCase()
+  const avatarLetter = profile?.full_name.charAt(0).toUpperCase()
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
@@ -127,7 +146,7 @@ export default function Dashboard() {
         </div>
         <div className="mt-auto">
           <button
-            onClick={() => supabase.auth.signOut()}
+            onClick={async () => { await supabase.auth.signOut(); router.push('/login') }}
             className="text-gray-400 hover:text-white"
           >
             Выйти
@@ -153,7 +172,7 @@ export default function Dashboard() {
             {avatarLetter}
           </div>
           <div className="text-center lg:text-left">
-            <h1 className="text-2xl font-bold mb-2">Привет, {profile.name}!</h1>
+            <h1 className="text-2xl font-bold mb-2">Привет, {profile.full_name}!</h1>
             <p className="text-gray-400">{profile.position} • {profile.city}, {profile.country}</p>
             {profile.is_founder_verified && (
               <span className="bg-yellow-500 text-black px-2 py-1 rounded text-sm font-medium mt-2 inline-block">
@@ -213,11 +232,11 @@ export default function Dashboard() {
               <div key={match.id} className="bg-gray-800 p-4 rounded-lg">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <div className="font-medium">{new Date(match.date).toLocaleDateString('ru-RU')}</div>
-                    <div className="text-gray-400">vs {match.opponent}</div>
+                    <div className="font-medium">{new Date(match.played_at).toLocaleDateString('ru-RU')}</div>
+                    <div className="text-gray-400">vs {match.opponent_team}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold">{match.score}</div>
+                    <div className="text-xl font-bold">{match.score_us}:{match.score_them}</div>
                     <div className="text-sm text-gray-400">
                       {match.goals}G + {match.assists}A
                     </div>
