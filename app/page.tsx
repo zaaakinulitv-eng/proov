@@ -1,152 +1,178 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { User } from '@supabase/supabase-js'
 
 export default function Home() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<any>(null)
+  const [playerCount, setPlayerCount] = useState(0)
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-      setLoading(false)
-    }
-    getUser()
+    supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).then(({ count }) => {
+      setPlayerCount(count || 0)
+    })
   }, [])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#080808] flex items-center justify-center page-enter">
-        <div className="animate-pulse text-[#AAFF00] text-xl font-bold">Proov</div>
-      </div>
-    )
-  }
+  return (
+    <div className="min-h-screen bg-[#080808] text-white overflow-x-hidden">
 
-  if (user) {
-    return (
-      <div className="min-h-screen bg-[#080808] page-enter">
-        {/* Header */}
-        <header className="header-base h-16 flex items-center px-8">
-          <div className="flex-1">
-            <h1 className="text-2xl font-black text-[#AAFF00]">Proov</h1>
-          </div>
-          <div className="flex gap-4">
-            <Link href="/dashboard" className="btn-primary text-sm">
+      <nav className="sticky top-0 z-50 h-16 flex items-center px-6 md:px-12 border-b border-[#161616] bg-[#080808]/90 backdrop-blur-xl">
+        <span className="text-xl font-black text-[#AAFF00] tracking-tight">Proov</span>
+        <div className="flex-1" />
+        <div className="flex gap-3 items-center">
+          <Link href="/scout" className="text-sm text-[#888] hover:text-white transition-colors hidden md:block">
+            Найти игрока
+          </Link>
+          {user ? (
+            <Link href="/dashboard" className="bg-[#AAFF00] text-black font-bold px-5 py-2 rounded-xl text-sm hover:brightness-110 transition-all">
               Мой профиль
             </Link>
-            <button 
-              onClick={async () => {
-                await supabase.auth.signOut()
-                window.location.reload()
-              }}
-              className="btn-secondary text-sm"
-            >
-              Выход
-            </button>
-          </div>
-        </header>
-
-        {/* Hero */}
-        <main className="max-w-7xl mx-auto px-8 py-20">
-          <div className="text-center mb-20">
-            <h1 className="text-6xl font-black mb-6 text-white">
-              Докажи что ты <span className="text-[#AAFF00]">игрок</span>
-            </h1>
-            <p className="text-xl text-[#888888] max-w-2xl mx-auto mb-12">
-              Платформа для скаутов и игроков. Верифицированные матчи, прозрачная статистика, реальная оценка.
-            </p>
-            <div className="flex gap-4 justify-center">
-              <Link href="/submit-match" className="btn-primary">
-                Добавить матч
+          ) : (
+            <>
+              <Link href="/login" className="text-sm text-[#888] hover:text-white transition-colors">
+                Войти
               </Link>
-              <Link href="/dashboard" className="btn-secondary">
-                Мой рейтинг
+              <Link href="/register" className="bg-[#AAFF00] text-black font-bold px-5 py-2 rounded-xl text-sm hover:brightness-110 transition-all">
+                Начать
               </Link>
-            </div>
-          </div>
-
-          {/* Features */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-20">
-            {[
-              {
-                title: 'Верифицированные матчи',
-                desc: 'Только реальные данные. Каждый матч проходит модерацию.',
-                icon: '✓'
-              },
-              {
-                title: 'FIFA-рейтинг',
-                desc: 'Твой реальный рейтинг на основе статистики матчей.',
-                icon: '⭐'
-              },
-              {
-                title: 'Для скаутов',
-                desc: 'Откройте свой профиль — скауты смогут оценить твои возможности.',
-                icon: '👁'
-              }
-            ].map((feature, i) => (
-              <div key={i} className="card-stagger card-elevated">
-                <div className="text-4xl mb-4">{feature.icon}</div>
-                <h3 className="text-lg font-bold mb-2">{feature.title}</h3>
-                <p className="text-[#888888]">{feature.desc}</p>
-              </div>
-            ))}
-          </div>
-        </main>
-      </div>
-    )
-  }
-
-  return (
-    <div className="min-h-screen bg-[#080808] page-enter">
-      {/* Header */}
-      <header className="header-base h-16 flex items-center px-8">
-        <h1 className="text-2xl font-black text-[#AAFF00]">Proov</h1>
-        <div className="flex-1" />
-        <div className="flex gap-4">
-          <Link href="/login" className="btn-secondary">
-            Войти
-          </Link>
-          <Link href="/register" className="btn-primary">
-            Регистрация
-          </Link>
+            </>
+          )}
         </div>
-      </header>
+      </nav>
 
-      {/* Hero */}
-      <main className="max-w-7xl mx-auto px-8 py-20 text-center">
-        <h1 className="text-6xl md:text-7xl font-black mb-6">
-          Докажи что ты <span className="text-[#AAFF00]">игрок</span>
+      <section className="relative flex flex-col items-center justify-center text-center px-6 pt-24 pb-20 md:pt-36 md:pb-32">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[#AAFF00] opacity-[0.04] blur-[120px] pointer-events-none" />
+
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#AAFF0030] bg-[#AAFF0008] mb-8">
+          <span className="w-2 h-2 rounded-full bg-[#AAFF00] animate-pulse" />
+          <span className="text-xs font-semibold text-[#AAFF00] uppercase tracking-widest">
+            {playerCount > 0 ? `${playerCount} игроков уже в базе` : 'Бесплатно для игроков'}
+          </span>
+        </div>
+
+        <h1 className="text-5xl md:text-7xl lg:text-8xl font-black leading-none tracking-tight mb-6 max-w-4xl">
+          Докажи что<br />
+          <span className="text-[#AAFF00]">ты игрок</span>
         </h1>
-        <p className="text-xl text-[#888888] max-w-2xl mx-auto mb-12">
-          Верифицированная платформа для скаутов и игроков. Твоя реальная статистика в одном месте.
-        </p>
-        <div className="flex gap-4 justify-center">
-          <Link href="/register" className="btn-primary text-lg px-8 py-4">
-            Начать
-          </Link>
-          <Link href="/scout" className="btn-secondary text-lg px-8 py-4">
-            Поиск игроков
-          </Link>
-        </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-6 mt-32 max-w-2xl mx-auto">
-          {[
-            { num: '1000+', label: 'Игроков' },
-            { num: '5000+', label: 'Матчей' },
-            { num: '100+', label: 'Скаутов' }
-          ].map((stat, i) => (
-            <div key={i} className="card-stagger">
-              <div className="text-3xl font-black text-[#AAFF00]">{stat.num}</div>
-              <div className="text-sm text-[#888888]">{stat.label}</div>
-            </div>
-          ))}
+        <p className="text-lg md:text-xl text-[#888888] max-w-xl mb-10 leading-relaxed">
+          Верифицированный цифровой паспорт футболиста. Реальная статистика, FIFA-рейтинг, видимость для скаутов.
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <Link href="/register" className="bg-[#AAFF00] text-black font-black px-8 py-4 rounded-xl text-base hover:brightness-110 transition-all w-full sm:w-auto">
+            Создать профиль — бесплатно
+          </Link>
+          <Link href="/scout" className="border border-[#333] text-white font-bold px-8 py-4 rounded-xl text-base hover:border-[#AAFF00] hover:text-[#AAFF00] transition-all w-full sm:w-auto">
+            Найти игрока →
+          </Link>
         </div>
-      </main>
+      </section>
+
+      <section className="border-y border-[#161616] py-8 px-6">
+        <div className="max-w-4xl mx-auto grid grid-cols-3 gap-4 text-center">
+          <div>
+            <div className="text-2xl md:text-4xl font-black text-[#AAFF00]">200M+</div>
+            <div className="text-xs md:text-sm text-[#666] mt-1">любителей без профиля</div>
+          </div>
+          <div>
+            <div className="text-2xl md:text-4xl font-black text-[#AAFF00]">100%</div>
+            <div className="text-xs md:text-sm text-[#666] mt-1">верифицированные данные</div>
+          </div>
+          <div>
+            <div className="text-2xl md:text-4xl font-black text-[#AAFF00]">0₽</div>
+            <div className="text-xs md:text-sm text-[#666] mt-1">для игроков навсегда</div>
+          </div>
+        </div>
+      </section>
+
+      <section className="px-6 py-20 md:py-32 max-w-5xl mx-auto">
+        <p className="text-xs font-semibold text-[#AAFF00] uppercase tracking-widest mb-4 text-center">Как это работает</p>
+        <h2 className="text-3xl md:text-5xl font-black text-center mb-16 tracking-tight">
+          Три шага до профиля
+        </h2>
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="bg-[#111] border border-[#1A1A1A] p-8 rounded-2xl hover:border-[#AAFF0030] transition-all">
+            <div className="text-4xl mb-4">🪪</div>
+            <div className="text-xs font-bold text-[#AAFF00] uppercase tracking-widest mb-2">01</div>
+            <h3 className="text-xl font-bold mb-2">Регистрируйся</h3>
+            <p className="text-[#888] leading-relaxed">Создай профиль за 2 минуты. Укажи позицию, клуб, город.</p>
+          </div>
+          <div className="bg-[#111] border border-[#1A1A1A] p-8 rounded-2xl hover:border-[#AAFF0030] transition-all">
+            <div className="text-4xl mb-4">⚽</div>
+            <div className="text-xs font-bold text-[#AAFF00] uppercase tracking-widest mb-2">02</div>
+            <h3 className="text-xl font-bold mb-2">Добавляй матчи</h3>
+            <p className="text-[#888] leading-relaxed">После каждой игры вноси статистику и фото результата.</p>
+          </div>
+          <div className="bg-[#111] border border-[#1A1A1A] p-8 rounded-2xl hover:border-[#AAFF0030] transition-all">
+            <div className="text-4xl mb-4">🏆</div>
+            <div className="text-xs font-bold text-[#AAFF00] uppercase tracking-widest mb-2">03</div>
+            <h3 className="text-xl font-bold mb-2">Получи рейтинг</h3>
+            <p className="text-[#888] leading-relaxed">После верификации — FIFA-карточка и видимость для скаутов.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="px-6 py-16 border-t border-[#161616]">
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-12">
+          <div className="flex-1">
+            <p className="text-xs font-semibold text-[#AAFF00] uppercase tracking-widest mb-4">Для скаутов</p>
+            <h2 className="text-3xl md:text-5xl font-black mb-6 tracking-tight">
+              85% будущих<br />профи — здесь
+            </h2>
+            <p className="text-[#888] text-lg mb-8 leading-relaxed">
+              Игроки которых нет на Transfermarkt. Верифицированная статистика. Прямой контакт без агентов.
+            </p>
+            <Link href="/scout" className="bg-[#AAFF00] text-black font-black inline-block px-8 py-4 rounded-xl hover:brightness-110 transition-all">
+              Найти игрока →
+            </Link>
+          </div>
+          <div className="flex-1 grid grid-cols-2 gap-4 w-full">
+            <div className="bg-[#111] border border-[#1A1A1A] rounded-xl p-5 hover:border-[#AAFF0030] transition-all">
+              <div className="text-2xl mb-2">🎯</div>
+              <div className="text-sm font-semibold">Фильтр по позиции</div>
+            </div>
+            <div className="bg-[#111] border border-[#1A1A1A] rounded-xl p-5 hover:border-[#AAFF0030] transition-all">
+              <div className="text-2xl mb-2">✅</div>
+              <div className="text-sm font-semibold">Trust Score</div>
+            </div>
+            <div className="bg-[#111] border border-[#1A1A1A] rounded-xl p-5 hover:border-[#AAFF0030] transition-all">
+              <div className="text-2xl mb-2">💬</div>
+              <div className="text-sm font-semibold">Прямой контакт</div>
+            </div>
+            <div className="bg-[#111] border border-[#1A1A1A] rounded-xl p-5 hover:border-[#AAFF0030] transition-all">
+              <div className="text-2xl mb-2">📊</div>
+              <div className="text-sm font-semibold">Реальная статистика</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="px-6 py-24 text-center">
+        <div className="max-w-2xl mx-auto bg-[#AAFF00] rounded-3xl p-12">
+          <h2 className="text-3xl md:text-5xl font-black text-black mb-4 tracking-tight">
+            Готов доказать?
+          </h2>
+          <p className="text-black/70 mb-8 text-lg">
+            Создай профиль бесплатно и получи свою FIFA-карточку.
+          </p>
+          <Link href="/register" className="inline-block bg-black text-[#AAFF00] font-black px-10 py-4 rounded-xl text-lg hover:bg-[#111] transition-colors">
+            Создать профиль
+          </Link>
+        </div>
+      </section>
+
+      <footer className="border-t border-[#161616] px-6 py-8 text-center">
+        <p className="text-[#444] text-sm">
+          © 2026 Proov ·{' '}
+          <Link href="/scout" className="hover:text-[#AAFF00] transition-colors">Найти игрока</Link>
+          {' · '}
+          <Link href="/register" className="hover:text-[#AAFF00] transition-colors">Регистрация</Link>
+        </p>
+      </footer>
+
     </div>
   )
 }

@@ -5,211 +5,184 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
-const ADMIN_EMAIL = 'erikagi@yandex.ru'
-
-interface Profile {
-  id: string
-  full_name: string
-  position: string
-  city: string
-  country: string
-  trust_score: number
-}
-
-interface Match {
-  id: string
-  player_id: string
-  opponent_team: string
-  score_us: number
-  score_them: number
-  goals: number
-  assists: number
-  minutes_played: number
-  status: string
-  played_at: string
-  created_at: string
-}
-
-export default function Admin() {
+export default function Home() {
   const [user, setUser] = useState<any>(null)
-  const [profiles, setProfiles] = useState<Profile[]>([])
-  const [matches, setMatches] = useState<Match[]>([])
-  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending')
-  const [loading, setLoading] = useState(true)
+  const [playerCount, setPlayerCount] = useState(0)
   const router = useRouter()
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user || user.email !== ADMIN_EMAIL) {
-        router.push('/dashboard')
-        return
-      }
-      setUser(user)
-
-      const [profilesRes, matchesRes] = await Promise.all([
-        supabase.from('profiles').select('*'),
-        supabase.from('matches').select('*').order('created_at', { ascending: false })
-      ])
-
-      if (profilesRes.data) setProfiles(profilesRes.data)
-      if (matchesRes.data) setMatches(matchesRes.data)
-      setLoading(false)
-    }
-
-    checkAuth()
-  }, [router])
-
-  const handleApprove = async (matchId: string) => {
-    const { error } = await supabase
-      .from('matches')
-      .update({ status: 'approved' })
-      .eq('id', matchId)
-
-    if (!error) {
-      setMatches(matches.map(m => m.id === matchId ? { ...m, status: 'approved' } : m))
-    }
-  }
-
-  const handleReject = async (matchId: string) => {
-    const { error } = await supabase
-      .from('matches')
-      .update({ status: 'rejected' })
-      .eq('id', matchId)
-
-    if (!error) {
-      setMatches(matches.map(m => m.id === matchId ? { ...m, status: 'rejected' } : m))
-    }
-  }
-
-  const getProfileName = (id: string) => {
-    const profile = profiles.find(p => p.id === id)
-    return profile?.full_name || 'Unknown'
-  }
-
-  const filteredMatches = matches.filter(m => m.status === activeTab)
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#080808] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#AAFF0033] border-t-[#AAFF00] rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-[#888888]">Загрузка админ-панели...</p>
-        </div>
-      </div>
-    )
-  }
+    supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
+    supabase.from('profiles').select('id', { count: 'exact' }).then(({ count }) => {
+      setPlayerCount(count || 0)
+    })
+  }, [])
 
   return (
-    <div className="min-h-screen bg-[#080808] page-enter">
-      {/* Header */}
-      <header className="header-base h-20 flex items-center px-8 border-b border-[#1A1A1A]">
-        <h1 className="text-2xl font-black text-[#AAFF00]">Admin</h1>
+    <div className="min-h-screen bg-[#080808] text-white overflow-x-hidden">
+
+      {/* NAV */}
+      <nav className="header-base h-16 flex items-center px-6 md:px-12 border-b border-[#161616]">
+        <span className="text-xl font-black text-[#AAFF00] tracking-tight">Proov</span>
         <div className="flex-1" />
         <div className="flex gap-3 items-center">
-          <Link href="/dashboard" className="btn-secondary text-sm">
-            Dashboard
+          <Link href="/scout" className="text-sm text-[#888] hover:text-white transition-colors hidden md:block">
+            Найти игрока
           </Link>
-          <button
-            onClick={async () => {
-              await supabase.auth.signOut()
-              window.location.href = '/login'
-            }}
-            className="btn-secondary text-sm"
-          >
-            Выход
-          </button>
+          {user ? (
+            <Link href="/dashboard" className="btn-primary text-sm px-5 py-2">
+              Мой профиль
+            </Link>
+          ) : (
+            <>
+              <Link href="/login" className="text-sm text-[#888] hover:text-white transition-colors">
+                Войти
+              </Link>
+              <Link href="/register" className="btn-primary text-sm px-5 py-2">
+                Начать
+              </Link>
+            </>
+          )}
         </div>
-      </header>
+      </nav>
 
-      <main className="max-w-7xl mx-auto px-8 py-12">
-        {/* Tabs */}
-        <div className="flex gap-4 mb-12 border-b border-[#222222] pb-4">
-          {(['pending', 'approved', 'rejected'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-6 py-2 font-bold uppercase tracking-widest rounded-lg transition-all ${
-                activeTab === tab
-                  ? 'bg-[#AAFF00] text-black'
-                  : 'text-[#888888] hover:text-[#AAFF00]'
-              }`}
-            >
-              {tab === 'pending' && `На проверке (${matches.filter(m => m.status === 'pending').length})`}
-              {tab === 'approved' && `Одобрено (${matches.filter(m => m.status === 'approved').length})`}
-              {tab === 'rejected' && `Отклонено (${matches.filter(m => m.status === 'rejected').length})`}
-            </button>
+      {/* HERO */}
+      <section className="relative flex flex-col items-center justify-center text-center px-6 pt-24 pb-20 md:pt-36 md:pb-32">
+        {/* Glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[#AAFF00] opacity-[0.04] blur-[120px] pointer-events-none" />
+
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#AAFF0030] bg-[#AAFF0008] mb-8">
+          <span className="w-2 h-2 rounded-full bg-[#AAFF00] animate-pulse" />
+          <span className="text-xs font-semibold text-[#AAFF00] uppercase tracking-widest">
+            {playerCount > 0 ? `${playerCount} игроков уже в базе` : 'Бесплатно для игроков'}
+          </span>
+        </div>
+
+        <h1 className="text-5xl md:text-7xl lg:text-8xl font-black leading-none tracking-tight mb-6 max-w-4xl">
+          Докажи что<br />
+          <span className="text-[#AAFF00]">ты игрок</span>
+        </h1>
+
+        <p className="text-lg md:text-xl text-[#888888] max-w-xl mb-10 leading-relaxed">
+          Верифицированный цифровой паспорт футболиста. Реальная статистика, рейтинг, видимость для скаутов.
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <Link href="/register" className="btn-primary text-base px-8 py-4 font-bold w-full sm:w-auto">
+            Создать профиль — бесплатно
+          </Link>
+          <Link href="/scout" className="btn-secondary text-base px-8 py-4 w-full sm:w-auto">
+            Найти игрока →
+          </Link>
+        </div>
+      </section>
+
+      {/* STATS BAR */}
+      <section className="border-y border-[#161616] py-8 px-6">
+        <div className="max-w-4xl mx-auto grid grid-cols-3 gap-4 text-center">
+          {[
+            { num: '200M+', label: 'любителей без профиля' },
+            { num: '100%', label: 'верифицированные данные' },
+            { num: '0₽', label: 'для игроков навсегда' },
+          ].map((s, i) => (
+            <div key={i}>
+              <div className="text-2xl md:text-4xl font-black text-[#AAFF00]">{s.num}</div>
+              <div className="text-xs md:text-sm text-[#666] mt-1">{s.label}</div>
+            </div>
           ))}
         </div>
+      </section>
 
-        {/* Matches List */}
-        {filteredMatches.length === 0 ? (
-          <div className="card text-center py-16">
-            <p className="text-[#888888] text-lg">
-              {activeTab === 'pending' && 'Нет матчей на проверке'}
-              {activeTab === 'approved' && 'Нет одобренных матчей'}
-              {activeTab === 'rejected' && 'Нет отклоненных матчей'}
+      {/* HOW IT WORKS */}
+      <section className="px-6 py-20 md:py-32 max-w-5xl mx-auto">
+        <p className="text-xs font-semibold text-[#AAFF00] uppercase tracking-widest mb-4 text-center">Как это работает</p>
+        <h2 className="text-3xl md:text-5xl font-black text-center mb-16 tracking-tight">
+          Три шага до профиля
+        </h2>
+
+        <div className="grid md:grid-cols-3 gap-6">
+          {[
+            {
+              num: '01',
+              title: 'Регистрируйся',
+              desc: 'Создай профиль за 2 минуты. Укажи позицию, клуб, город.',
+              icon: '🪪'
+            },
+            {
+              num: '02',
+              title: 'Добавляй матчи',
+              desc: 'После каждой игры вноси статистику и фото результата.',
+              icon: '⚽'
+            },
+            {
+              num: '03',
+              title: 'Получи рейтинг',
+              desc: 'После верификации — карточка с рейтингом и видимость для скаутов.',
+              icon: '🏆'
+            },
+          ].map((step, i) => (
+            <div key={i} className="card bg-[#111] border border-[#1A1A1A] p-8 rounded-2xl hover:border-[#AAFF0030] transition-all">
+              <div className="text-4xl mb-4">{step.icon}</div>
+              <div className="text-xs font-bold text-[#AAFF00] uppercase tracking-widest mb-2">{step.num}</div>
+              <h3 className="text-xl font-bold mb-2">{step.title}</h3>
+              <p className="text-[#888] leading-relaxed">{step.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* FOR SCOUTS */}
+      <section className="px-6 py-16 border-t border-[#161616]">
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-12">
+          <div className="flex-1">
+            <p className="text-xs font-semibold text-[#AAFF00] uppercase tracking-widest mb-4">Для скаутов</p>
+            <h2 className="text-3xl md:text-5xl font-black mb-6 tracking-tight">
+              85% будущих<br />профи — здесь
+            </h2>
+            <p className="text-[#888] text-lg mb-8 leading-relaxed">
+              Игроки которых нет на Transfermarkt. Верифицированная статистика. Прямой контакт без агентов.
             </p>
+            <Link href="/scout" className="btn-primary inline-block px-8 py-4 font-bold">
+              Найти игрока →
+            </Link>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredMatches.map((match, i) => (
-              <div
-                key={match.id}
-                className="card-stagger card bg-[#111111] p-6 hover:bg-[#161616] transition-colors"
-                style={{ animationDelay: `${i * 0.05}s` }}
-              >
-                <div className="grid grid-cols-12 gap-6 items-center">
-                  {/* Player Info */}
-                  <div className="col-span-3">
-                    <p className="text-xs text-[#888888] uppercase tracking-widest font-medium mb-1">Игрок</p>
-                    <p className="text-lg font-bold text-white">{getProfileName(match.player_id)}</p>
-                    <p className="text-sm text-[#888888]">
-                      {new Date(match.played_at).toLocaleDateString('ru-RU')}
-                    </p>
-                  </div>
-
-                  {/* Match Info */}
-                  <div className="col-span-3">
-                    <p className="text-xs text-[#888888] uppercase tracking-widest font-medium mb-1">Матч</p>
-                    <p className="text-lg font-bold text-white">
-                      {match.score_us}:{match.score_them} vs {match.opponent_team}
-                    </p>
-                    <p className="text-sm text-[#888888]">
-                      {match.goals}G + {match.assists}A, {match.minutes_played} мин
-                    </p>
-                  </div>
-
-                  {/* Status Badge */}
-                  <div className="col-span-2 flex justify-center">
-                    {activeTab === 'pending' && <span className="tag-pending">⏳ На проверке</span>}
-                    {activeTab === 'approved' && <span className="tag-verified">✓ Одобрено</span>}
-                    {activeTab === 'rejected' && <span className="tag-rejected">✗ Отклонено</span>}
-                  </div>
-
-                  {/* Actions */}
-                  {activeTab === 'pending' && (
-                    <div className="col-span-4 flex gap-2 justify-end">
-                      <button
-                        onClick={() => handleApprove(match.id)}
-                        className="btn-primary text-sm px-4 py-2"
-                      >
-                        Одобрить
-                      </button>
-                      <button
-                        onClick={() => handleReject(match.id)}
-                        className="btn-secondary text-sm px-4 py-2 border-[#FF3333] hover:text-[#FF3333]"
-                      >
-                        Отклонить
-                      </button>
-                    </div>
-                  )}
-                </div>
+          <div className="flex-1 grid grid-cols-2 gap-4 w-full">
+            {[
+              { label: 'Фильтр по позиции', icon: '🎯' },
+              { label: 'Trust Score', icon: '✅' },
+              { label: 'Прямой контакт', icon: '💬' },
+              { label: 'Реальная статистика', icon: '📊' },
+            ].map((f, i) => (
+              <div key={i} className="bg-[#111] border border-[#1A1A1A] rounded-xl p-5 hover:border-[#AAFF0030] transition-all">
+                <div className="text-2xl mb-2">{f.icon}</div>
+                <div className="text-sm font-semibold">{f.label}</div>
               </div>
             ))}
           </div>
-        )}
-      </main>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="px-6 py-24 text-center">
+        <div className="max-w-2xl mx-auto bg-[#AAFF00] rounded-3xl p-12">
+          <h2 className="text-3xl md:text-5xl font-black text-black mb-4 tracking-tight">
+            Готов доказать?
+          </h2>
+          <p className="text-black/70 mb-8 text-lg">
+            Создай профиль бесплатно и получи свою карточку.
+          </p>
+          <Link href="/register" className="inline-block bg-black text-[#AAFF00] font-black px-10 py-4 rounded-xl text-lg hover:bg-[#111] transition-colors">
+            Создать профиль
+          </Link>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="border-t border-[#161616] px-6 py-8 text-center">
+        <p className="text-[#444] text-sm">
+          © 2026 Proov · <Link href="/scout" className="hover:text-[#AAFF00] transition-colors">Найти игрока</Link> · <Link href="/register" className="hover:text-[#AAFF00] transition-colors">Регистрация</Link>
+        </p>
+      </footer>
+
     </div>
   )
 }
