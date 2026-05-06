@@ -90,6 +90,24 @@
     color: #AAFF00;
   }
 
+  /* Contact Button */
+  .btn-contact {
+    border: 1px solid #AAFF00;
+    color: #AAFF00;
+    background-color: transparent;
+    font-weight: 700;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-size: 16px;
+    transition: all 200ms ease-out;
+    display: inline-block;
+  }
+
+  .btn-contact:hover {
+    background-color: #AAFF00;
+    color: #000000;
+  }
+
   /* Card Base */
   .card {
     background-color: #161616;

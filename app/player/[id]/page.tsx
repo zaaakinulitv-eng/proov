@@ -37,6 +37,16 @@ export default function PlayerProfile() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Contact modal state
+  const [showContactModal, setShowContactModal] = useState(false)
+  const [contactForm, setContactForm] = useState({
+    scout_name: '',
+    scout_email: '',
+    message: ''
+  })
+  const [contactLoading, setContactLoading] = useState(false)
+  const [contactSuccess, setContactSuccess] = useState(false)
+
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -75,6 +85,39 @@ export default function PlayerProfile() {
 
     fetchData()
   }, [userId])
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setContactLoading(true)
+
+    try {
+      const response = await fetch('/api/contact-player', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          player_id: userId,
+          ...contactForm
+        }),
+      })
+
+      if (response.ok) {
+        setContactSuccess(true)
+        setTimeout(() => {
+          setShowContactModal(false)
+          setContactSuccess(false)
+          setContactForm({ scout_name: '', scout_email: '', message: '' })
+        }, 2000)
+      } else {
+        alert('Ошибка отправки сообщения')
+      }
+    } catch (error) {
+      alert('Ошибка отправки сообщения')
+    } finally {
+      setContactLoading(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -226,6 +269,16 @@ export default function PlayerProfile() {
           </div>
         </div>
 
+        {/* Contact Button */}
+        <div className="mb-16 text-center">
+          <button
+            onClick={() => setShowContactModal(true)}
+            className="btn-contact text-lg px-8 py-4"
+          >
+            📩 Связаться с игроком
+          </button>
+        </div>
+
         {/* Recent Matches */}
         <div>
           <h2 className="text-3xl font-black mb-8 flex items-center gap-3">
@@ -291,6 +344,85 @@ export default function PlayerProfile() {
           </Link>
         </div>
       </main>
+
+      {/* Contact Modal */}
+      {showContactModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#161616] border border-[#222] rounded-3xl max-w-md w-full p-8 relative">
+            <button
+              onClick={() => setShowContactModal(false)}
+              className="absolute top-4 right-4 text-[#888888] hover:text-white text-2xl"
+            >
+              ×
+            </button>
+
+            <h2 className="text-2xl font-black mb-6 text-white">Написать игроку</h2>
+
+            {contactSuccess ? (
+              <div className="text-center">
+                <div className="text-4xl mb-4">✓</div>
+                <p className="text-[#AAFF00] font-bold mb-2">Сообщение отправлено!</p>
+                <p className="text-[#888888] text-sm">Игрок получит уведомление.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleContactSubmit} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-[#AAFF00] mb-2 uppercase tracking-widest">
+                    Твоё имя / организация *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={contactForm.scout_name}
+                    onChange={(e) => setContactForm(prev => ({ ...prev, scout_name: e.target.value }))}
+                    className="input-field w-full"
+                    placeholder="Иван Петров / ФК Спартак"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-[#AAFF00] mb-2 uppercase tracking-widest">
+                    Твой email *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={contactForm.scout_email}
+                    onChange={(e) => setContactForm(prev => ({ ...prev, scout_email: e.target.value }))}
+                    className="input-field w-full"
+                    placeholder="ivan@sparta.ru"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-[#AAFF00] mb-2 uppercase tracking-widest">
+                    Сообщение *
+                  </label>
+                  <textarea
+                    required
+                    minLength={50}
+                    value={contactForm.message}
+                    onChange={(e) => setContactForm(prev => ({ ...prev, message: e.target.value }))}
+                    className="input-field w-full h-32 resize-none"
+                    placeholder="Расскажите о себе и предложении для игрока..."
+                  />
+                  <p className="text-xs text-[#888888] mt-1">
+                    Минимум 50 символов ({contactForm.message.length}/50)
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={contactLoading}
+                  className="btn-primary w-full text-lg py-4 disabled:opacity-50"
+                >
+                  {contactLoading ? 'Отправка...' : 'Отправить'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
