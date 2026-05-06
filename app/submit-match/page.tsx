@@ -165,11 +165,11 @@ export default function SubmitMatch() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080808] page-enter">
+    <div className="min-h-screen bg-[#080808] has-mobile-nav page-enter">
       {/* Header */}
-      <header className="header-base h-20 flex items-center px-8 border-b border-[#1A1A1A]">
+      <header className="header-base h-20 flex items-center px-4 md:px-8 border-b border-[#1A1A1A]">
         <Link href="/dashboard" className="text-[#AAFF00] font-black text-xl">
-          ← Назад
+          ←
         </Link>
         <div className="flex-1" />
         <button
@@ -177,13 +177,14 @@ export default function SubmitMatch() {
             await supabase.auth.signOut()
             window.location.href = '/login'
           }}
-          className="btn-secondary text-sm"
+          className="btn-secondary text-sm flex items-center gap-2"
         >
-          Выход
+          <span className="md:hidden">⏏</span>
+          <span className="hidden md:inline">Выход</span>
         </button>
       </header>
 
-      <main className="max-w-2xl mx-auto px-8 py-12">
+      <main className="max-w-2xl w-full mx-auto px-4 md:px-8 py-6 md:py-12">
         <div className="page-enter">
           <h1 className="text-4xl font-black mb-2">Добавить матч</h1>
           <p className="text-[#888888] mb-12">Загрузи фото результата матча. AI автоматически проверит и верифицирует матч, если фото чёткое и счёт совпадает.</p>
@@ -231,7 +232,7 @@ export default function SubmitMatch() {
               <label className="block text-sm font-medium text-[#AAFF00] mb-3 uppercase tracking-widest">
                 🎯 Счёт
               </label>
-              <div className="grid grid-cols-5 gap-3 items-end">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
                 <div>
                   <input
                     type="number"
@@ -325,7 +326,7 @@ export default function SubmitMatch() {
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
                 onClick={() => document.getElementById('photo-input')?.click()}
-                className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-200 cursor-pointer ${
+                className={`border-2 border-dashed rounded-2xl p-6 md:p-8 text-center transition-all duration-200 cursor-pointer ${
                   dragActive
                     ? 'border-[#AAFF00] bg-[#AAFF0010]'
                     : photoFile

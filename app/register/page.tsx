@@ -83,10 +83,11 @@ export default function Register() {
             birth_date: formData.birth_date,
             trust_score: 0,
             is_founder_verified: false,
+            onboarding_completed: false
           })
 
         if (profileError) throw profileError
-        router.push('/dashboard')
+        router.push('/onboarding')
       }
     } catch (err: any) {
       setError(err.message)
@@ -96,7 +97,7 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen flex page-enter">
+    <div className="min-h-screen flex has-mobile-nav page-enter">
       {/* Left Side - Premium Brand */}
       <div className="hidden md:flex md:w-1/2 bg-[#AAFF00] flex-col justify-center items-center p-12">
         <div className="max-w-md">
@@ -113,7 +114,7 @@ export default function Register() {
       </div>
 
       {/* Right Side - Form */}
-      <div className="w-full md:w-1/2 bg-[#080808] flex flex-col justify-center items-center p-8">
+      <div className="w-full md:w-1/2 bg-[#080808] flex flex-col justify-center items-center p-4 md:p-8">
         <div className="w-full max-w-sm">
           {/* Header */}
           <div className="mb-12 md:hidden">
@@ -172,7 +173,7 @@ export default function Register() {
             <div>
               <label className="block text-sm font-medium text-[#AAFF00] mb-3">Твои позиции</label>
               <p className="text-xs text-[#888888] mb-4">Выберите от 1 до 3 позиций</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {positions.map(pos => {
                   const selected = formData.positions.includes(pos)
                   return (
@@ -193,7 +194,7 @@ export default function Register() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-[#AAFF00] mb-2">Город</label>
                 <input
@@ -220,7 +221,7 @@ export default function Register() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-[#AAFF00] mb-2">Национальность</label>
                 <input

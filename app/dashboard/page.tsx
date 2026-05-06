@@ -15,10 +15,13 @@ interface Profile {
   avatar_url?: string
   positions?: string[]
   birth_year?: number
+  birth_date?: string
   height?: number
   strong_foot?: string
+  nationality?: string
   trust_score: number
   is_founder_verified: boolean
+  onboarding_completed?: boolean
 }
 
 interface Match {
@@ -34,11 +37,16 @@ interface Match {
 }
 
 export default function Dashboard() {
+  const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [matches, setMatches] = useState<Match[]>([])
   const [loading, setLoading] = useState(true)
   const [trustScoreWidth, setTrustScoreWidth] = useState(0)
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [notificationsLoading, setNotificationsLoading] = useState(true)
 
   useEffect(() => {
     const getUser = async () => {
@@ -60,11 +68,10 @@ export default function Dashboard() {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
 
-      if (profileError) {
-        console.error('Error fetching profile:', profileError)
-        setLoading(false)
+      if (profileError || !profileData) {
+        router.push('/onboarding')
         return
       }
 
@@ -74,7 +81,7 @@ export default function Dashboard() {
         .from('matches')
         .select('*')
         .eq('player_id', user.id)
-        .order('played_at', { ascending: false })
+        .order('created_at', { ascending: false })
 
       setMatches(matchesData || [])
       setLoading(false)
@@ -86,7 +93,81 @@ export default function Dashboard() {
     }
 
     fetchData()
+  }, [user, router])
+
+  useEffect(() => {
+    if (!user) return
+
+    const fetchNotifications = async () => {
+      const { data: notificationsData, error: notificationsError } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('player_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+      if (!notificationsError) {
+        setNotifications(notificationsData || [])
+      }
+
+      const { count } = await supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('player_id', user.id)
+        .eq('is_read', false)
+
+      setUnreadCount(count || 0)
+      setNotificationsLoading(false)
+    }
+
+    fetchNotifications()
+
+    const channel = supabase
+      .channel(`notifications-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `player_id=eq.${user.id}`
+        },
+        payload => {
+          setNotifications(prev => [payload.new, ...prev].slice(0, 10))
+          setUnreadCount(prev => prev + 1)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [user])
+
+  const handleMarkRead = async (notificationId: string) => {
+    if (!user) return
+
+    await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId)
+
+    setNotifications(prev => prev.map(item => item.id === notificationId ? { ...item, is_read: true } : item))
+    setUnreadCount(prev => Math.max(prev - 1, 0))
+  }
+
+  const handleMarkAllRead = async () => {
+    if (!user) return
+
+    await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('player_id', user.id)
+      .eq('is_read', false)
+
+    setNotifications(prev => prev.map(item => ({ ...item, is_read: true })))
+    setUnreadCount(0)
+  }
 
   if (loading || !profile) {
     return (
@@ -119,33 +200,122 @@ export default function Dashboard() {
 
   const avatarLetter = profile.full_name.charAt(0).toUpperCase()
 
+  // Check if banner should show
+  const filledFields = [
+    profile.club,
+    profile.birth_date,
+    profile.nationality,
+    profile.height,
+    profile.strong_foot
+  ].filter(Boolean).length
+  
+  const showOnboardingBanner = !profile.onboarding_completed || (approvedMatches.length === 0 && filledFields < 4)
+
   return (
-    <div className="min-h-screen bg-[#080808] page-enter">
+    <div className="min-h-screen bg-[#080808] has-mobile-nav page-enter">
       {/* Header */}
-      <header className="header-base h-20 flex items-center px-8 border-b border-[#1A1A1A]">
+      <header className="header-base h-20 flex items-center px-4 md:px-8 border-b border-[#1A1A1A]">
         <div className="flex-1">
           <h1 className="text-2xl font-black text-[#AAFF00]">Proov</h1>
         </div>
-        <div className="flex gap-3 items-center">
-          <Link href="/scout" className="btn-secondary text-sm">
-            🔍 Поиск
+        <div className="flex gap-2 md:gap-3 items-center">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowNotifications(prev => !prev)}
+              className="btn-secondary text-sm relative flex items-center gap-2"
+            >
+              <span>🔔</span>
+              <span className="hidden md:inline">Уведомления</span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-2 -right-2 inline-flex items-center justify-center rounded-full bg-[#FF3333] px-2 text-[10px] font-black text-white">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+            {showNotifications && (
+              <div className="absolute right-0 mt-3 w-[360px] max-w-full rounded-3xl border border-[#222] bg-[#090909] shadow-2xl z-50 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-4 border-b border-[#1A1A1A]">
+                  <div>
+                    <p className="text-sm font-bold text-white">Уведомления</p>
+                    <p className="text-xs text-[#888888]">Последние 10</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleMarkAllRead}
+                    className="text-xs text-[#AAFF00]"
+                  >
+                    Прочитать все
+                  </button>
+                </div>
+                <div className="max-h-96 overflow-y-auto">
+                  {notificationsLoading ? (
+                    <div className="p-6 text-center text-[#888888]">Загрузка...</div>
+                  ) : notifications.length === 0 ? (
+                    <div className="p-6 text-center text-[#888888]">Нет уведомлений</div>
+                  ) : (
+                    notifications.map(notification => (
+                      <button
+                        key={notification.id}
+                        type="button"
+                        onClick={() => handleMarkRead(notification.id)}
+                        className={`w-full text-left px-4 py-4 border-b border-[#111] transition-colors ${notification.is_read ? 'bg-[#090909]' : 'bg-[#111111]'}`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-bold text-white">{notification.title}</p>
+                            <p className="text-sm text-[#888888] mt-1">{notification.message}</p>
+                          </div>
+                          <span className="text-[11px] text-[#666666]">
+                            {new Date(notification.created_at).toLocaleString('ru-RU', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <Link href="/scout" className="btn-secondary text-sm flex items-center gap-2">
+            <span>🔍</span>
+            <span className="hidden md:inline">Поиск</span>
           </Link>
-          <Link href="/submit-match" className="btn-primary text-sm">
-            + Добавить матч
+          <Link href="/submit-match" className="btn-primary text-sm flex items-center gap-2">
+            <span>+</span>
+            <span className="hidden md:inline">Добавить</span>
           </Link>
           <button
             onClick={async () => {
               await supabase.auth.signOut()
               window.location.href = '/login'
             }}
-            className="btn-secondary text-sm"
+            className="btn-secondary text-sm flex items-center gap-2"
           >
-            Выход
+            <span>⏏</span>
+            <span className="hidden md:inline">Выход</span>
           </button>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-8 py-12">
+      <main className="max-w-7xl w-full mx-auto px-4 md:px-8 py-6 md:py-12">
+        {/* Onboarding Banner */}
+        {showOnboardingBanner && (
+          <div className="mb-8 bg-[#AAFF00] rounded-2xl px-6 py-4 flex items-center justify-between">
+            <div>
+              <p className="text-black font-bold text-lg">Заверши настройку профиля</p>
+              <p className="text-black/70 text-sm">Заполни все данные и добавь свой первый матч</p>
+            </div>
+            <Link href="/onboarding" className="btn-primary bg-black text-[#AAFF00] hover:bg-[#1A1A1A] px-6 py-2 whitespace-nowrap">
+              Продолжить →
+            </Link>
+          </div>
+        )}
         {/* Profile Card with Gradient Border */}
         <div className="relative mb-12 card-stagger card-elevated p-8 border-2" style={{
           borderImage: 'linear-gradient(135deg, rgba(170, 255, 0, 0.6), rgba(170, 255, 0, 0.1), transparent) 1'

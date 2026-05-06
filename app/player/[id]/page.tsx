@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { User } from '@supabase/supabase-js'
+import { shortPosition } from '../../lib/position-utils'
 
 interface Profile {
   id: string
@@ -165,21 +166,23 @@ export default function PlayerProfile() {
   const last5Matches = approvedMatches.slice(0, 5)
 
   return (
-    <div className="min-h-screen bg-[#080808]">
+    <div className="min-h-screen bg-[#080808] has-mobile-nav">
       {/* Header */}
-      <header className="header-base h-20 flex items-center px-8 border-b border-[#1A1A1A]">
-        <Link href="/" className="text-[#AAFF00] font-black text-xl">
-          ← Proov
+      <header className="header-base h-20 flex items-center px-4 md:px-8 border-b border-[#1A1A1A]">
+        <Link href="/" className="text-[#AAFF00] font-black text-xl flex items-center gap-2">
+          <span className="md:hidden">←</span>
+          <span className="hidden md:inline">Proov</span>
         </Link>
         <div className="flex-1" />
         {!user && (
-          <Link href="/login" className="btn-secondary text-sm">
-            Войти
+          <Link href="/login" className="btn-secondary text-sm flex items-center gap-2">
+            <span className="md:hidden">🔐</span>
+            <span className="hidden md:inline">Войти</span>
           </Link>
         )}
       </header>
 
-      <main className="max-w-7xl mx-auto px-8 py-12 page-enter">
+      <main className="max-w-7xl w-full mx-auto px-4 md:px-8 py-6 md:py-12 page-enter">
         {/* Profile Header */}
         <div className="text-center mb-16">
           <div className="flex justify-center mb-6">
@@ -199,13 +202,15 @@ export default function PlayerProfile() {
           <h1 className="text-5xl font-black mb-3 text-white uppercase tracking-tighter">
             {profile.full_name}
           </h1>
-          <p className="text-xl text-[#888888] font-medium">
-            {profile.positions?.join(' • ') || profile.position || 'Игрок'} • {profile.city}, {profile.country}
+          <p className="text-xl text-[#888888] font-medium truncate max-w-[200px] md:max-w-none">
+            {(profile.positions && profile.positions.length > 0
+              ? profile.positions.map(shortPosition).join(' • ')
+              : shortPosition(profile.position || 'Игрок'))} • {profile.city}, {profile.country}
           </p>
         </div>
 
         {/* FIFA-Style Golden Card */}
-        <div className="relative mb-16 p-12 rounded-3xl overflow-hidden" style={{
+        <div className="relative mb-16 p-6 md:p-8 rounded-2xl overflow-hidden" style={{
           background: 'linear-gradient(135deg, #1A1200 0%, #3D2B00 50%, #6B4A00 100%)',
           border: '2px solid #AAFF00'
         }}>
@@ -213,7 +218,7 @@ export default function PlayerProfile() {
           <div className="absolute inset-0 bg-gradient-to-br from-[#AAFF0020] to-transparent pointer-events-none"></div>
 
           <div className="relative z-10">
-            <div className="grid grid-cols-4 gap-8 text-center mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center mb-12">
               {/* Rating Circle */}
               <div className="flex flex-col items-center">
                 <div className="relative w-40 h-40 mb-6">
@@ -244,7 +249,7 @@ export default function PlayerProfile() {
             </div>
 
             {/* Additional Stats */}
-            <div className="grid grid-cols-3 gap-6 mt-12 pt-12 border-t border-[#AAFF0040]">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 pt-12 border-t border-[#AAFF0040]">
               <div className="text-center">
                 <div className="text-3xl font-black text-[#AAFF00]">{goalsPerMatch}</div>
                 <p className="text-xs text-[#FFD700] font-bold uppercase tracking-widest mt-2">Голов/Матч</p>

@@ -223,16 +223,16 @@ export default function EditProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080808] page-enter">
-      <header className="header-base h-20 flex items-center px-8 border-b border-[#1A1A1A]">
+    <div className="min-h-screen bg-[#080808] has-mobile-nav page-enter">
+      <header className="header-base h-20 flex items-center px-4 md:px-8 border-b border-[#1A1A1A]">
         <Link href="/dashboard" className="text-[#AAFF00] font-black text-xl">
-          ← Назад
+          ←
         </Link>
         <div className="flex-1" />
-        <h1 className="text-xl font-black text-white">Редактировать профиль</h1>
+        <h1 className="text-xl font-black text-white">Редактировать</h1>
       </header>
 
-      <main className="max-w-3xl mx-auto px-8 py-12 space-y-10">
+      <main className="max-w-3xl w-full mx-auto px-4 md:px-8 py-6 md:py-12 space-y-10">
         {error && (
           <div className="bg-[#FF333315] border border-[#FF333330] rounded-xl p-4 text-[#FF3333]">
             {error}
@@ -245,7 +245,7 @@ export default function EditProfile() {
           </div>
         )}
 
-        <section className="bg-[#111111] border border-[#1A1A1A] rounded-3xl p-8">
+        <section className="bg-[#111111] border border-[#1A1A1A] rounded-2xl p-4 md:p-6 lg:p-8">
           <div className="flex flex-col items-center gap-6">
             <div className="w-24 h-24 rounded-full overflow-hidden bg-[#080808] border border-[#AAFF00] flex items-center justify-center text-4xl font-black text-[#AAFF00]">
               {photoPreview ? (
@@ -284,7 +284,7 @@ export default function EditProfile() {
         </section>
 
         <form onSubmit={handleSave} className="space-y-8">
-          <section className="bg-[#111111] border border-[#1A1A1A] rounded-3xl p-8 space-y-6">
+          <section className="bg-[#111111] border border-[#1A1A1A] rounded-2xl p-4 md:p-6 lg:p-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-bold text-[#AAFF00] mb-2">Имя</label>
@@ -384,7 +384,7 @@ export default function EditProfile() {
             </div>
           </section>
 
-          <section className="bg-[#111111] border border-[#1A1A1A] rounded-3xl p-8">
+          <section className="bg-[#111111] border border-[#1A1A1A] rounded-2xl p-4 md:p-6 lg:p-8">
             <div className="mb-6">
               <h3 className="text-2xl font-black text-white">Твои позиции</h3>
               <p className="text-sm text-[#888888]">Можно выбрать от 1 до 3 позиций</p>

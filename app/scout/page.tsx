@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { shortPosition } from '../lib/position-utils'
 
 interface Profile {
   id: string
@@ -147,13 +148,14 @@ export default function ScoutPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#080808]">
-        <header className="header-base h-20 flex items-center px-8 border-b border-[#1A1A1A]">
+      <div className="min-h-screen bg-[#080808] has-mobile-nav">
+        <header className="header-base h-20 flex items-center px-4 md:px-8 border-b border-[#1A1A1A]">
           <div className="flex-1">
             <h1 className="text-2xl font-black text-[#AAFF00]">Proov</h1>
           </div>
-          <Link href="/" className="btn-secondary text-sm">
-            На главную
+          <Link href="/" className="btn-secondary text-sm flex items-center gap-2">
+            <span className="md:hidden">←</span>
+            <span className="hidden md:inline">На главную</span>
           </Link>
         </header>
         <div className="flex items-center justify-center h-96">
@@ -167,18 +169,19 @@ export default function ScoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080808] page-enter">
+    <div className="min-h-screen bg-[#080808] has-mobile-nav page-enter">
       {/* Header */}
-      <header className="header-base h-20 flex items-center px-8 border-b border-[#1A1A1A]">
+      <header className="header-base h-20 flex items-center px-4 md:px-8 border-b border-[#1A1A1A]">
         <div className="flex-1">
           <h1 className="text-2xl font-black text-[#AAFF00]">Proov</h1>
         </div>
-        <Link href="/" className="btn-secondary text-sm">
-          На главную
+        <Link href="/" className="btn-secondary text-sm flex items-center gap-2">
+          <span className="md:hidden">←</span>
+          <span className="hidden md:inline">На главную</span>
         </Link>
       </header>
 
-      <main className="max-w-7xl mx-auto px-8 py-12">
+      <main className="max-w-7xl w-full mx-auto px-4 md:px-8 py-6 md:py-12">
         {/* Page Header */}
         <div className="mb-12">
           <h2 className="text-5xl font-black mb-3 text-white">Найти игрока</h2>
@@ -189,8 +192,8 @@ export default function ScoutPage() {
         </div>
 
         {/* Filters */}
-        <div className="card-elevated mb-12 p-8">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
+        <div className="card-elevated mb-12 p-4 md:p-6 lg:p-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-6 mb-6">
             {/* Position Filter */}
             <div>
               <label className="block text-sm font-medium text-[#AAFF00] mb-3 uppercase tracking-widest">
@@ -320,7 +323,11 @@ export default function ScoutPage() {
                         </div>
                         <div>
                           <p className="font-bold text-white">{player.full_name}</p>
-                          <p className="text-sm text-[#888888]">{player.positions && player.positions.length > 0 ? player.positions.join(', ') : player.position}</p>
+                          <p className="text-sm text-[#888888] truncate max-w-[200px] md:max-w-none">
+                            {player.positions && player.positions.length > 0
+                              ? player.positions.map(shortPosition).join(' • ')
+                              : shortPosition(player.position || 'Игрок')}
+                          </p>
                         </div>
                       </div>
                     </div>

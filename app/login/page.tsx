@@ -33,7 +33,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex page-enter">
+    <div className="min-h-screen flex has-mobile-nav page-enter">
       {/* Left Side - Premium Brand */}
       <div className="hidden md:flex md:w-1/2 bg-[#AAFF00] flex-col justify-center items-center p-12">
         <div className="max-w-md">
@@ -50,7 +50,7 @@ export default function Login() {
       </div>
 
       {/* Right Side - Form */}
-      <div className="w-full md:w-1/2 bg-[#080808] flex flex-col justify-center items-center p-8">
+      <div className="w-full md:w-1/2 bg-[#080808] flex flex-col justify-center items-center p-4 md:p-8">
         <div className="w-full max-w-sm">
           {/* Header */}
           <div className="mb-12 md:hidden">

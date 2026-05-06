@@ -44,6 +44,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to save contact' }, { status: 500 })
     }
 
+    await supabase.from('notifications').insert({
+      player_id,
+      type: 'scout_contact',
+      title: 'Скаут хочет связаться 👀',
+      message: `${scout_name} заинтересован твоим профилем`
+    })
+
     // Send email to player
     const playerEmailHtml = `
       <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; background: #080808; color: white; padding: 40px;">
