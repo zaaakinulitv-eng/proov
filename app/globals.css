@@ -1,26 +1,295 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&display=swap');
 @import "tailwindcss";
 
+/* Design System Colors */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-primary: #080808;
+  --bg-secondary: #111111;
+  --bg-card: #161616;
+  --bg-elevated: #1C1C1C;
+  --accent: #AAFF00;
+  --accent-dim: #AAFF0015;
+  --accent-dim-strong: #AAFF0033;
+  --text-primary: #FFFFFF;
+  --text-secondary: #888888;
+  --text-tertiary: #444444;
+  --border: #222222;
+  --border-accent: #AAFF0033;
+  --status-pending: #FF9900;
+  --status-pending-dim: #FF990015;
+  --status-rejected: #FF3333;
+  --status-rejected-dim: #FF333315;
+  --gold-light: #6B4A00;
+  --gold-mid: #3D2B00;
+  --gold-dark: #1A1200;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* Typography */
+@layer base {
+  html {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+  }
+
+  h1 {
+    font-weight: 900;
+    letter-spacing: -0.03em;
+  }
+
+  h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  p {
+    font-weight: 400;
+    line-height: 1.6;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Utility Classes */
+@layer components {
+  /* Primary Button */
+  .btn-primary {
+    background-color: #AAFF00;
+    color: #000000;
+    font-weight: 700;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-size: 16px;
+    transition: all 200ms ease-out;
+    display: inline-block;
+  }
+
+  .btn-primary:hover {
+    transform: scale(1.02);
+    filter: brightness(1.1);
+  }
+
+  /* Secondary Button */
+  .btn-secondary {
+    border: 1px solid #333333;
+    color: white;
+    background-color: transparent;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-weight: 500;
+    transition: all 200ms ease-out;
+    display: inline-block;
+  }
+
+  .btn-secondary:hover {
+    border-color: #AAFF00;
+    color: #AAFF00;
+  }
+
+  /* Card Base */
+  .card {
+    background-color: #161616;
+    border: 1px solid #222222;
+    border-radius: 20px;
+    padding: 24px;
+    transition: all 300ms ease-out;
+  }
+
+  .card:hover {
+    border-color: #333333;
+    transform: translateY(-2px);
+  }
+
+  /* Card Elevated */
+  .card-elevated {
+    background-color: #161616;
+    border: 1px solid #222222;
+    border-radius: 20px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: all 300ms ease-out;
+  }
+
+  .card-elevated::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(170, 255, 0, 0.08), transparent);
+    pointer-events: none;
+  }
+
+  /* Input Field */
+  .input-field {
+    background-color: #111111;
+    border: 1px solid #2A2A2A;
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: white;
+    font-size: 16px;
+    font-weight: 400;
+    transition: all 200ms;
+  }
+
+  .input-field::placeholder {
+    color: #444444;
+  }
+
+  .input-field:focus {
+    border-color: #AAFF00;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(170, 255, 0, 0.1);
+  }
+
+  /* Tag - Verified */
+  .tag-verified {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    background-color: rgba(170, 255, 0, 0.1);
+    color: #AAFF00;
+    border: 1px solid rgba(170, 255, 0, 0.2);
+  }
+
+  /* Tag - Pending */
+  .tag-pending {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    background-color: rgba(255, 153, 0, 0.1);
+    color: #FF9900;
+    border: 1px solid rgba(255, 153, 0, 0.2);
+  }
+
+  /* Tag - Rejected */
+  .tag-rejected {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    background-color: rgba(255, 51, 51, 0.1);
+    color: #FF3333;
+    border: 1px solid rgba(255, 51, 51, 0.2);
+  }
+
+  /* Trust Score Bar */
+  .trust-score-track {
+    width: 100%;
+    background-color: #1A1A1A;
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .trust-score-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(to right, #AAFF00, #66FF00);
+    transition: width 1000ms ease-out;
+  }
+
+  /* Stat Block */
+  .stat-block {
+    background-color: #111111;
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .stat-number {
+    font-size: 32px;
+    font-weight: 900;
+    color: white;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: #666666;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 8px;
+  }
+
+  /* Header Base */
+  .header-base {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background-color: rgba(8, 8, 8, 0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid #1A1A1A;
+  }
+
+  /* Page Entrance Animation */
+  @keyframes pageEnter {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .page-enter {
+    animation: pageEnter 0.4s ease-out forwards;
+  }
+
+  /* Card Stagger Animation */
+  @keyframes cardStagger {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .card-stagger {
+    animation: cardStagger 0.4s ease-out forwards;
+    opacity: 0;
+  }
+
+  .card-stagger:nth-child(1) { animation-delay: 0.05s; }
+  .card-stagger:nth-child(2) { animation-delay: 0.10s; }
+  .card-stagger:nth-child(3) { animation-delay: 0.15s; }
+  .card-stagger:nth-child(4) { animation-delay: 0.20s; }
+  .card-stagger:nth-child(5) { animation-delay: 0.25s; }
+  .card-stagger:nth-child(6) { animation-delay: 0.30s; }
+  .card-stagger:nth-child(7) { animation-delay: 0.35s; }
+  .card-stagger:nth-child(8) { animation-delay: 0.40s; }
+  .card-stagger:nth-child(9) { animation-delay: 0.45s; }
+  .card-stagger:nth-child(10) { animation-delay: 0.50s; }
+
+  /* Count-up Animation for Numbers */
+  @keyframes countUp {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .count-up {
+    animation: countUp 0.6s ease-out;
+  }
 }

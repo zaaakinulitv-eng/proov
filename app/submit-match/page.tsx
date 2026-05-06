@@ -1,129 +1,79 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { User } from '@supabase/supabase-js'
 
 export default function SubmitMatch() {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [dragActive, setDragActive] = useState(false)
   const [formData, setFormData] = useState({
     opponent_team: '',
-    played_at: '',
     score_us: '',
     score_them: '',
     goals: '',
     assists: '',
-    yellow_cards: '',
-    red_card: false,
-    minutes_played: ''
+    minutes_played: '',
+    played_at: new Date().toISOString().split('T')[0]
   })
-  const [photo, setPhoto] = useState<File | null>(null)
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [error, setError] = useState('')
   const router = useRouter()
 
   useEffect(() => {
-    // Check auth
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
+    const getUser = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser()
+      if (error || !user) {
+        window.location.href = '/login'
+        return
       }
+      setUser(user)
     }
-    checkAuth()
-  }, [router])
+    getUser()
+  }, [])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target
-    
-    // For minutes_played, allow only numbers 1-120 without auto-correction
-    if (name === 'minutes_played') {
-      if (value === '') {
-        setFormData({ ...formData, [name]: value })
-      } else {
-        const numValue = parseInt(value)
-        if (!isNaN(numValue) && numValue >= 1 && numValue <= 120) {
-          setFormData({ ...formData, [name]: value })
-        } else if (value.length === 1) {
-          // Allow user to type first digit
-          setFormData({ ...formData, [name]: value })
-        }
-      }
-      return
-    }
-    
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value
-    })
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setPhoto(file)
-      const reader = new FileReader()
-      reader.onload = () => {
-        setPhotoPreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true)
+    } else if (e.type === 'dragleave') {
+      setDragActive(false)
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!user) return
+
     setLoading(true)
     setError('')
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Не авторизован')
+      const minutesVal = Math.max(1, Math.min(90, parseInt(formData.minutes_played) || 0))
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .single()
-
-      if (!profile) throw new Error('Профиль не найден')
-
-      let photoUrl = null
-      if (photo) {
-        const fileExt = photo.name.split('.').pop()
-        const fileName = `${profile.id}_${Date.now()}.${fileExt}`
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('match-photos')
-          .upload(fileName, photo)
-
-        if (uploadError) throw uploadError
-
-        photoUrl = supabase.storage.from('match-photos').getPublicUrl(fileName).data.publicUrl
-      }
-
-      const { error: insertError } = await supabase
+      const { error: matchError } = await supabase
         .from('matches')
         .insert({
-          player_id: profile.id,
+          player_id: user.id,
           opponent_team: formData.opponent_team,
           score_us: parseInt(formData.score_us),
           score_them: parseInt(formData.score_them),
-          goals: parseInt(formData.goals) || 0,
-          assists: parseInt(formData.assists) || 0,
-          yellow_cards: parseInt(formData.yellow_cards) || 0,
-          red_cards: formData.red_card ? 1 : 0,
-          minutes_played: parseInt(formData.minutes_played),
-          photo_url: photoUrl,
-          status: 'pending',
-          played_at: formData.played_at
+          goals: parseInt(formData.goals),
+          assists: parseInt(formData.assists),
+          minutes_played: minutesVal,
+          played_at: formData.played_at,
+          status: 'pending'
         })
 
-      if (insertError) throw insertError
-
-      setSuccess(true)
-      setTimeout(() => {
-        router.push('/dashboard')
-      }, 2000)
+      if (matchError) throw matchError
+      router.push('/dashboard')
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -131,199 +81,187 @@ export default function SubmitMatch() {
     }
   }
 
-  if (success) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-[#22c55e] text-6xl mb-4">✓</div>
-          <h2 className="text-2xl font-bold mb-2">Матч отправлен на верификацию!</h2>
-          <p className="text-gray-400">Перенаправление на дашборд...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <div className="max-w-[430px] mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="flex items-center mb-8">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="mr-4 text-[#22c55e] text-2xl"
-          >
-            ←
-          </button>
-          <h1 className="text-xl font-bold">Добавить матч</h1>
-        </div>
+    <div className="min-h-screen bg-[#080808] page-enter">
+      {/* Header */}
+      <header className="header-base h-20 flex items-center px-8 border-b border-[#1A1A1A]">
+        <Link href="/dashboard" className="text-[#AAFF00] font-black text-xl">
+          ← Назад
+        </Link>
+        <div className="flex-1" />
+        <button
+          onClick={async () => {
+            await supabase.auth.signOut()
+            window.location.href = '/login'
+          }}
+          className="btn-secondary text-sm"
+        >
+          Выход
+        </button>
+      </header>
 
-        {error && <p className="text-red-500 mb-4">{error}</p>}
+      <main className="max-w-2xl mx-auto px-8 py-12">
+        <div className="page-enter">
+          <h1 className="text-4xl font-black mb-2">Добавить матч</h1>
+          <p className="text-[#888888] mb-12">Заполни данные о матче. После проверки скаутами матч будет верифицирован.</p>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Opponent Team */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Команда соперника</label>
-            <input
-              type="text"
-              name="opponent_team"
-              value={formData.opponent_team}
-              onChange={handleChange}
-              required
-              className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-[#22c55e] focus:outline-none"
-            />
-          </div>
-
-          {/* Date */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Дата матча</label>
-            <input
-              type="date"
-              name="played_at"
-              value={formData.played_at}
-              onChange={handleChange}
-              required
-              className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-[#22c55e] focus:outline-none"
-            />
-          </div>
-
-          {/* Score */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Счёт</label>
-            <div className="flex space-x-4">
-              <div className="flex-1">
-                <label className="block text-xs text-gray-400 mb-1">Мы</label>
-                <input
-                  type="number"
-                  name="score_us"
-                  value={formData.score_us}
-                  onChange={handleChange}
-                  min="0"
-                  max="99"
-                  required
-                  className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-[#22c55e] focus:outline-none"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="block text-xs text-gray-400 mb-1">Они</label>
-                <input
-                  type="number"
-                  name="score_them"
-                  value={formData.score_them}
-                  onChange={handleChange}
-                  min="0"
-                  max="99"
-                  required
-                  className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-[#22c55e] focus:outline-none"
-                />
-              </div>
+          {error && (
+            <div className="bg-[#FF333315] border border-[#FF333330] rounded-lg p-4 mb-8 text-[#FF3333] text-sm">
+              {error}
             </div>
-          </div>
+          )}
 
-          {/* Goals */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Голы</label>
-            <input
-              type="number"
-              name="goals"
-              value={formData.goals}
-              onChange={handleChange}
-              min="0"
-              className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-[#22c55e] focus:outline-none"
-            />
-          </div>
-
-          {/* Assists */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Передачи</label>
-            <input
-              type="number"
-              name="assists"
-              value={formData.assists}
-              onChange={handleChange}
-              min="0"
-              className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-[#22c55e] focus:outline-none"
-            />
-          </div>
-
-          {/* Yellow Cards */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Жёлтые карточки</label>
-            <input
-              type="number"
-              name="yellow_cards"
-              value={formData.yellow_cards}
-              onChange={handleChange}
-              min="0"
-              max="2"
-              className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-[#22c55e] focus:outline-none"
-            />
-          </div>
-
-          {/* Red Card */}
-          <div>
-            <label className="flex items-center">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Opponent */}
+            <div>
+              <label className="block text-sm font-medium text-[#AAFF00] mb-3 uppercase tracking-widest">
+                ⚽ Соперник
+              </label>
               <input
-                type="checkbox"
-                name="red_card"
-                checked={formData.red_card}
+                type="text"
+                name="opponent_team"
+                placeholder="Название команды или имя противника"
+                value={formData.opponent_team}
                 onChange={handleChange}
-                className="mr-2"
+                required
+                className="input-field w-full"
               />
-              <span className="text-sm font-medium">Красная карточка</span>
-            </label>
-          </div>
-
-          {/* Minutes Played */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Минуты сыграно</label>
-            <input
-              type="number"
-              name="minutes_played"
-              value={formData.minutes_played}
-              onChange={handleChange}
-              min="1"
-              required
-              className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-[#22c55e] focus:outline-none"
-              placeholder="1-120"
-            />
-          </div>
-
-          {/* Photo Upload */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Фото результата</label>
-            <div
-              onClick={() => document.getElementById('photo-input')?.click()}
-              className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center cursor-pointer hover:border-[#22c55e] transition-colors"
-            >
-              {photoPreview ? (
-                <img src={photoPreview} alt="Preview" className="max-h-32 mx-auto rounded" />
-              ) : (
-                <>
-                  <div className="text-4xl text-gray-400 mb-2">📷</div>
-                  <p className="text-gray-400">Загрузить фото результата</p>
-                  <p className="text-xs text-gray-500 mt-1">Фото табло, скрин WhatsApp или протокол</p>
-                </>
-              )}
             </div>
-            <input
-              id="photo-input"
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoChange}
-              className="hidden"
-            />
-          </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#22c55e] text-black font-bold py-4 rounded-lg hover:bg-[#1ea34a] disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'Отправка...' : 'Отправить на верификацию'}
-          </button>
-        </form>
-      </div>
+            {/* Date */}
+            <div>
+              <label className="block text-sm font-medium text-[#AAFF00] mb-3 uppercase tracking-widest">
+                📅 Дата матча
+              </label>
+              <input
+                type="date"
+                name="played_at"
+                value={formData.played_at}
+                onChange={handleChange}
+                required
+                className="input-field w-full"
+              />
+            </div>
+
+            {/* Score - Large Number Fields */}
+            <div>
+              <label className="block text-sm font-medium text-[#AAFF00] mb-3 uppercase tracking-widest">
+                🎯 Счёт
+              </label>
+              <div className="grid grid-cols-5 gap-3 items-end">
+                <div>
+                  <input
+                    type="number"
+                    name="score_us"
+                    min="0"
+                    max="99"
+                    placeholder="0"
+                    value={formData.score_us}
+                    onChange={handleChange}
+                    required
+                    className="input-field w-full text-center text-3xl font-black"
+                  />
+                  <p className="text-xs text-[#888888] text-center mt-2 uppercase">Мы</p>
+                </div>
+                <div className="text-center text-2xl font-black text-[#AAFF00]">:</div>
+                <div>
+                  <input
+                    type="number"
+                    name="score_them"
+                    min="0"
+                    max="99"
+                    placeholder="0"
+                    value={formData.score_them}
+                    onChange={handleChange}
+                    required
+                    className="input-field w-full text-center text-3xl font-black"
+                  />
+                  <p className="text-xs text-[#888888] text-center mt-2 uppercase">Они</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#AAFF00] mb-3 uppercase tracking-widest">
+                  ⚽ Голы
+                </label>
+                <input
+                  type="number"
+                  name="goals"
+                  min="0"
+                  placeholder="0"
+                  value={formData.goals}
+                  onChange={handleChange}
+                  required
+                  className="input-field w-full text-center text-2xl font-black"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#AAFF00] mb-3 uppercase tracking-widest">
+                  🎯 Передачи
+                </label>
+                <input
+                  type="number"
+                  name="assists"
+                  min="0"
+                  placeholder="0"
+                  value={formData.assists}
+                  onChange={handleChange}
+                  required
+                  className="input-field w-full text-center text-2xl font-black"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#AAFF00] mb-3 uppercase tracking-widest">
+                  ⏱ Минут
+                </label>
+                <input
+                  type="number"
+                  name="minutes_played"
+                  min="0"
+                  max="90"
+                  placeholder="90"
+                  value={formData.minutes_played}
+                  onChange={handleChange}
+                  required
+                  className="input-field w-full text-center text-2xl font-black"
+                />
+              </div>
+            </div>
+
+            {/* Upload Zone */}
+            <div
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-200 ${
+                dragActive
+                  ? 'border-[#AAFF00] bg-[#AAFF0010]'
+                  : 'border-[#AAFF0040] bg-[#AAFF0005]'
+              }`}
+            >
+              <p className="text-2xl mb-2">📸</p>
+              <p className="text-sm text-[#AAFF00] font-medium mb-1">Перетащи фото матча сюда</p>
+              <p className="text-xs text-[#888888]">или нажми чтобы выбрать файл</p>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Отправка...' : 'Отправить матч на проверку'}
+            </button>
+
+            <p className="text-xs text-center text-[#888888]">
+              После отправки матч будет проверен скаутами и добавлен в твою статистику
+            </p>
+          </form>
+        </div>
+      </main>
     </div>
   )
 }

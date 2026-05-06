@@ -49,7 +49,6 @@ export default function PlayerProfile() {
     const fetchData = async () => {
       if (!userId) return
 
-      // Fetch profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -64,19 +63,13 @@ export default function PlayerProfile() {
 
       setProfile(profileData)
 
-      // Fetch matches
-      const { data: matchesData, error: matchesError } = await supabase
+      const { data: matchesData } = await supabase
         .from('matches')
         .select('*')
         .eq('player_id', userId)
         .order('played_at', { ascending: false })
 
-      if (matchesError) {
-        setMatches([])
-      } else {
-        setMatches(matchesData || [])
-      }
-
+      setMatches(matchesData || [])
       setLoading(false)
     }
 
@@ -85,138 +78,219 @@ export default function PlayerProfile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center">
-        <div className="text-xl">Загрузка...</div>
+      <div className="min-h-screen bg-[#080808] flex items-center justify-center page-enter">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#AAFF0033] border-t-[#AAFF00] rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#888888]">Загрузка профиля...</p>
+        </div>
       </div>
     )
   }
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center">
-        <div className="text-xl">Игрок не найден</div>
+      <div className="min-h-screen bg-[#080808] flex items-center justify-center page-enter">
+        <div className="text-center">
+          <p className="text-2xl font-bold text-white mb-6">Игрок не найден</p>
+          <Link href="/" className="btn-primary">
+            На главную
+          </Link>
+        </div>
       </div>
     )
   }
 
-  // Calculate stats from approved matches only
   const approvedMatches = matches.filter(m => m.status === 'approved')
   const totalMatches = approvedMatches.length
   const totalGoals = approvedMatches.reduce((sum, m) => sum + m.goals, 0)
   const totalAssists = approvedMatches.reduce((sum, m) => sum + m.assists, 0)
   const totalMinutes = approvedMatches.reduce((sum, m) => sum + m.minutes_played, 0)
 
-  // Last 5 matches
-  const last5Matches = matches.slice(0, 5)
+  const goalsPerMatch = totalMatches > 0 ? (totalGoals / totalMatches).toFixed(1) : '0.0'
+  const assistsPerMatch = totalMatches > 0 ? (totalAssists / totalMatches).toFixed(1) : '0.0'
+  const averageMinutes = totalMatches > 0 ? Math.round(totalMinutes / totalMatches) : 0
 
-  const avatarLetter = profile?.full_name.charAt(0).toUpperCase()
+  let rating = 40
+  if (profile.trust_score > 50) rating += 20
+  rating += Math.min(totalMatches, 20)
+  if (parseFloat(goalsPerMatch) > 0.5) rating += 5
+  if (parseFloat(assistsPerMatch) > 1) rating += 5
+  rating = Math.min(rating, 90)
+
+  const last5Matches = approvedMatches.slice(0, 5)
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-[#080808]">
       {/* Header */}
-      <header className="flex justify-between items-center p-6 border-b border-gray-800">
-        <Link href="/" className="text-2xl font-bold text-[#22c55e]">
-          Proov
+      <header className="header-base h-20 flex items-center px-8 border-b border-[#1A1A1A]">
+        <Link href="/" className="text-[#AAFF00] font-black text-xl">
+          ← Proov
         </Link>
+        <div className="flex-1" />
         {!user && (
-          <Link
-            href="/login"
-            className="bg-[#22c55e] text-black px-4 py-2 rounded-lg font-medium hover:bg-[#16a34a] transition-colors"
-          >
+          <Link href="/login" className="btn-secondary text-sm">
             Войти
           </Link>
         )}
       </header>
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        {/* Hero Section */}
-        <div className="text-center mb-12">
-          <div className="flex justify-center mb-4">
-            <div className="w-20 h-20 bg-[#22c55e] rounded-full flex items-center justify-center text-3xl font-bold text-black">
-              {avatarLetter}
+      <main className="max-w-7xl mx-auto px-8 py-12 page-enter">
+        {/* Profile Header */}
+        <div className="text-center mb-16">
+          <div className="flex justify-center mb-6">
+            <div className="w-24 h-24 bg-gradient-to-br from-[#AAFF00] to-[#66FF00] rounded-full flex items-center justify-center text-4xl font-black text-black">
+              {profile.full_name.charAt(0).toUpperCase()}
             </div>
           </div>
           {profile.is_founder_verified && (
-            <div className="flex justify-center mb-4">
-              <span className="bg-yellow-500 text-black px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
-                ⭐ Founder Verified
-              </span>
+            <div className="flex justify-center mb-6">
+              <span className="tag-verified text-base px-4 py-2">⭐ Founder Verified</span>
             </div>
           )}
-          <h1 className="text-3xl font-bold mb-2">{profile.full_name}</h1>
-          <p className="text-gray-400 mb-6">
+          <h1 className="text-5xl font-black mb-3 text-white uppercase tracking-tighter">
+            {profile.full_name}
+          </h1>
+          <p className="text-xl text-[#888888] font-medium">
             {profile.position} • {profile.city}, {profile.country}
           </p>
-          <div className="max-w-xs mx-auto">
-            <div className="text-sm text-gray-400 mb-2">Trust Score</div>
-            <div className="w-full bg-gray-700 rounded-full h-2">
-              <div
-                className="bg-[#22c55e] h-2 rounded-full"
-                style={{ width: `${Math.min(profile.trust_score, 100)}%` }}
-              ></div>
-            </div>
-            <div className="text-sm mt-1">{profile.trust_score}/100</div>
-          </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-          <div className="bg-gray-800 p-6 rounded-lg text-center">
-            <div className="text-2xl font-bold text-[#22c55e]">{totalMatches}</div>
-            <div className="text-sm text-gray-400">Верифицированных матчей</div>
-          </div>
-          <div className="bg-gray-800 p-6 rounded-lg text-center">
-            <div className="text-2xl font-bold text-[#22c55e]">{totalGoals}</div>
-            <div className="text-sm text-gray-400">Голов</div>
-          </div>
-          <div className="bg-gray-800 p-6 rounded-lg text-center">
-            <div className="text-2xl font-bold text-[#22c55e]">{totalAssists}</div>
-            <div className="text-sm text-gray-400">Передач</div>
-          </div>
-          <div className="bg-gray-800 p-6 rounded-lg text-center">
-            <div className="text-2xl font-bold text-[#22c55e]">{totalMinutes}</div>
-            <div className="text-sm text-gray-400">Минут</div>
-          </div>
-        </div>
+        {/* FIFA-Style Golden Card */}
+        <div className="relative mb-16 p-12 rounded-3xl overflow-hidden" style={{
+          background: 'linear-gradient(135deg, #1A1200 0%, #3D2B00 50%, #6B4A00 100%)',
+          border: '2px solid #AAFF00'
+        }}>
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#AAFF0020] to-transparent pointer-events-none"></div>
 
-        {/* Progress Chart (Last 5 Matches) */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-6">Последние матчи</h2>
-          <div className="space-y-4">
-            {last5Matches.map((match) => (
-              <div key={match.id} className="bg-gray-800 p-4 rounded-lg">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <div className="font-medium">{new Date(match.played_at).toLocaleDateString('ru-RU')}</div>
-                    <div className="text-gray-400">vs {match.opponent_team}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xl font-bold">{match.score_us}:{match.score_them}</div>
-                    <div className="text-sm text-gray-400">
-                      {match.goals}G + {match.assists}A
+          <div className="relative z-10">
+            <div className="grid grid-cols-4 gap-8 text-center mb-12">
+              {/* Rating Circle */}
+              <div className="flex flex-col items-center">
+                <div className="relative w-40 h-40 mb-6">
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#AAFF00] to-[#FFD700] rounded-full flex items-center justify-center">
+                    <div className="absolute inset-2 bg-gradient-to-br from-[#1A1200] to-[#3D2B00] rounded-full flex items-center justify-center">
+                      <span className="text-6xl font-black text-[#AAFF00]">{rating}</span>
                     </div>
                   </div>
                 </div>
-                <div className={`text-sm ${match.status === 'approved' ? 'text-[#22c55e]' : 'text-gray-400'}`}>
-                  {match.status === 'approved' ? '✓ Верифицирован' : '⏳ На проверке'}
-                </div>
+                <p className="text-sm text-[#FFD700] font-bold uppercase tracking-widest">Рейтинг</p>
               </div>
-            ))}
+
+              {/* Stats */}
+              <div>
+                <div className="text-5xl font-black text-[#AAFF00] mb-3">{totalMatches}</div>
+                <p className="text-sm text-[#FFD700] font-bold uppercase tracking-widest">Матчей</p>
+              </div>
+
+              <div>
+                <div className="text-5xl font-black text-[#AAFF00] mb-3">{totalGoals}</div>
+                <p className="text-sm text-[#FFD700] font-bold uppercase tracking-widest">Голов</p>
+              </div>
+
+              <div>
+                <div className="text-5xl font-black text-[#AAFF00] mb-3">{totalAssists}</div>
+                <p className="text-sm text-[#FFD700] font-bold uppercase tracking-widest">Передач</p>
+              </div>
+            </div>
+
+            {/* Additional Stats */}
+            <div className="grid grid-cols-3 gap-6 mt-12 pt-12 border-t border-[#AAFF0040]">
+              <div className="text-center">
+                <div className="text-3xl font-black text-[#AAFF00]">{goalsPerMatch}</div>
+                <p className="text-xs text-[#FFD700] font-bold uppercase tracking-widest mt-2">Голов/Матч</p>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-black text-[#AAFF00]">{assistsPerMatch}</div>
+                <p className="text-xs text-[#FFD700] font-bold uppercase tracking-widest mt-2">Передач/Матч</p>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-black text-[#AAFF00]">{averageMinutes}</div>
+                <p className="text-xs text-[#FFD700] font-bold uppercase tracking-widest mt-2">Минут/Матч</p>
+              </div>
+            </div>
           </div>
         </div>
 
+        {/* Trust Score */}
+        <div className="card-elevated mb-16 p-8">
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-sm font-bold text-[#AAFF00] uppercase tracking-widest">Trust Score</span>
+            <span className="text-sm text-[#888888]">{profile.trust_score}/100</span>
+          </div>
+          <div className="trust-score-track" style={{ height: '8px' }}>
+            <div
+              className="trust-score-fill"
+              style={{ width: `${Math.min(profile.trust_score, 100)}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Recent Matches */}
+        <div>
+          <h2 className="text-3xl font-black mb-8 flex items-center gap-3">
+            Последние верифицированные матчи
+            {last5Matches.length > 0 && (
+              <span className="text-lg bg-[#AAFF0015] text-[#AAFF00] px-4 py-2 rounded-lg font-bold">
+                {approvedMatches.length}
+              </span>
+            )}
+          </h2>
+
+          {last5Matches.length === 0 ? (
+            <div className="card text-center py-16">
+              <p className="text-[#888888] text-lg">Пока нет верифицированных матчей</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {last5Matches.map((match, i) => (
+                <div
+                  key={match.id}
+                  className="card-stagger card bg-[#111111]"
+                  style={{ animationDelay: `${i * 0.05}s` }}
+                >
+                  <div className="grid grid-cols-12 gap-6 items-center">
+                    <div className="col-span-4">
+                      <p className="text-xs text-[#888888] uppercase tracking-widest font-medium mb-2">
+                        {new Date(match.played_at).toLocaleDateString('ru-RU', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                      <p className="text-lg font-bold text-white">vs {match.opponent_team}</p>
+                    </div>
+
+                    <div className="col-span-4 text-center">
+                      <p className="text-3xl font-black text-white">
+                        {match.score_us}:{match.score_them}
+                      </p>
+                      <p className="text-sm text-[#888888] mt-1">
+                        {match.goals}G + {match.assists}A • {match.minutes_played}мин
+                      </p>
+                    </div>
+
+                    <div className="col-span-4 flex justify-end items-center gap-4">
+                      <span className="tag-verified">✓ Верифицирован</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* CTA Section */}
-        <div className="bg-gray-800 p-8 rounded-lg text-center">
-          <h3 className="text-xl font-bold mb-4">Хочешь такой же профиль?</h3>
-          <p className="text-gray-400 mb-6">Зарегистрируйся на Proov бесплатно</p>
-          <Link
-            href="/register"
-            className="bg-[#22c55e] text-black px-6 py-3 rounded-lg font-medium hover:bg-[#16a34a] transition-colors inline-block"
-          >
+        <div className="mt-20 card-elevated p-12 text-center rounded-3xl">
+          <h3 className="text-3xl font-black mb-4 text-white">Хочешь такой же профиль?</h3>
+          <p className="text-lg text-[#888888] mb-8 max-w-xl mx-auto">
+            Зарегистрируйся на Proov прямо сейчас и начни верифицировать свои матчи.
+          </p>
+          <Link href="/register" className="btn-primary text-lg inline-block">
             Создать профиль
           </Link>
         </div>
-      </div>
+      </main>
     </div>
   )
 }
