@@ -70,25 +70,48 @@ export default function SubmitMatch() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user || !photoFile) {
-      setError('Пожалуйста, загрузите фото матча')
-      return
-    }
+    if (!user) return
 
     setLoading(true)
     setError('')
 
     try {
-      // Upload photo to Supabase Storage
+      const minutesVal = Math.max(1, Math.min(90, parseInt(formData.minutes_played) || 0))
+
+      // Вариант А: без фото - self-reported (auto_pending)
+      if (!photoFile) {
+        const { error: matchError } = await supabase
+          .from('matches')
+          .insert({
+            player_id: user.id,
+            opponent_team: formData.opponent_team,
+            score_us: parseInt(formData.score_us),
+            score_them: parseInt(formData.score_them),
+            goals: parseInt(formData.goals),
+            assists: parseInt(formData.assists),
+            minutes_played: minutesVal,
+            played_at: formData.played_at,
+            status: 'auto_pending',
+            verification_type: 'self_reported',
+            photo_url: null
+          })
+
+        if (matchError) throw matchError
+
+        alert('✓ Матч добавлен! Засчитается через 48 часов.')
+        router.push('/dashboard')
+        return
+      }
+
+      // Вариант Б: с фото - photo verification
       const fileExt = photoFile.name.split('.').pop()
       const fileName = `${user.id}_${Date.now()}.${fileExt}`
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('match-photos')
         .upload(fileName, photoFile)
 
       if (uploadError) throw uploadError
 
-      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('match-photos')
         .getPublicUrl(fileName)
@@ -108,11 +131,9 @@ export default function SubmitMatch() {
       })
 
       const verifyResult = await verifyResponse.json()
-
-      const minutesVal = Math.max(1, Math.min(90, parseInt(formData.minutes_played) || 0))
       const matchStatus = verifyResult.auto_approve ? 'approved' : 'pending'
 
-      // Insert match
+      // Insert match with photo verification
       const { error: matchError } = await supabase
         .from('matches')
         .insert({
@@ -125,6 +146,7 @@ export default function SubmitMatch() {
           minutes_played: minutesVal,
           played_at: formData.played_at,
           status: matchStatus,
+          verification_type: 'photo',
           photo_url: publicUrl
         })
 
@@ -132,7 +154,6 @@ export default function SubmitMatch() {
 
       // Update trust score if auto-approved
       if (verifyResult.auto_approve) {
-        // First get current trust score
         const { data: profile } = await supabase
           .from('profiles')
           .select('trust_score')
@@ -140,16 +161,13 @@ export default function SubmitMatch() {
           .single()
 
         if (profile) {
-          const { error: trustError } = await supabase
+          await supabase
             .from('profiles')
             .update({ trust_score: profile.trust_score + 20 })
             .eq('id', user.id)
-
-          if (trustError) console.error('Trust score update error:', trustError)
         }
       }
 
-      // Show success message and redirect
       if (verifyResult.auto_approve) {
         alert('✓ Матч верифицирован автоматически! Trust Score обновлён.')
       } else {
@@ -187,7 +205,7 @@ export default function SubmitMatch() {
       <main className="max-w-2xl w-full mx-auto px-4 md:px-8 py-6 md:py-12">
         <div className="page-enter">
           <h1 className="text-4xl font-black mb-2">Добавить матч</h1>
-          <p className="text-[#888888] mb-12">Загрузи фото результата матча. AI автоматически проверит и верифицирует матч, если фото чёткое и счёт совпадает.</p>
+          <p className="text-[#888888] mb-12">Введи данные матча. Без фото матч будет засчитан через 48 часов. Загруженное фото ускорит верификацию.</p>
 
           {error && (
             <div className="bg-[#FF333315] border border-[#FF333330] rounded-lg p-4 mb-8 text-[#FF3333] text-sm">
@@ -232,7 +250,39 @@ export default function SubmitMatch() {
               <label className="block text-sm font-medium text-[#AAFF00] mb-3 uppercase tracking-widest">
                 🎯 Счёт
               </label>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
+              {/* Mobile: 2-column flex layout */}
+              <div className="md:hidden flex gap-4 items-end">
+                <div className="flex-1">
+                  <input
+                    type="number"
+                    name="score_us"
+                    min="0"
+                    max="99"
+                    placeholder="0"
+                    value={formData.score_us}
+                    onChange={handleChange}
+                    required
+                    className="input-field w-full text-center text-4xl font-black"
+                  />
+                  <p className="text-xs text-[#888888] text-center mt-2 uppercase">Мы</p>
+                </div>
+                <div className="flex-1">
+                  <input
+                    type="number"
+                    name="score_them"
+                    min="0"
+                    max="99"
+                    placeholder="0"
+                    value={formData.score_them}
+                    onChange={handleChange}
+                    required
+                    className="input-field w-full text-center text-4xl font-black"
+                  />
+                  <p className="text-xs text-[#888888] text-center mt-2 uppercase">Они</p>
+                </div>
+              </div>
+              {/* Desktop: 5-column grid with separator */}
+              <div className="hidden md:grid grid-cols-5 gap-3 items-end">
                 <div>
                   <input
                     type="number"
@@ -318,7 +368,7 @@ export default function SubmitMatch() {
             {/* Upload Zone */}
             <div>
               <label className="block text-sm font-medium text-[#AAFF00] mb-3 uppercase tracking-widest">
-                📸 Фото результата матча
+                📸 Фото результата матча (опционально)
               </label>
               <div
                 onDragEnter={handleDrag}
@@ -360,14 +410,16 @@ export default function SubmitMatch() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || !photoFile}
+              disabled={loading}
               className="btn-primary w-full py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Анализ фото...' : 'Отправить матч'}
+              {loading ? 'Обработка...' : 'Отправить матч'}
             </button>
 
             <p className="text-xs text-center text-[#888888]">
-              AI автоматически верифицирует матч по фото. Если фото чёткое — Trust Score +20 сразу!
+              {photoFile 
+                ? 'AI автоматически верифицирует матч по фото. Если фото чёткое — Trust Score +20 сразу!'
+                : 'Матч будет засчитан через 48 часов. Загруженное фото ускорит проверку.'}
             </p>
           </form>
         </div>
