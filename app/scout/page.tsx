@@ -7,7 +7,9 @@ import { supabase } from '@/lib/supabase'
 interface Profile {
   id: string
   full_name: string
-  position: string
+  avatar_url?: string
+  positions?: string[]
+  position?: string
   city: string
   country: string
   trust_score: number
@@ -101,7 +103,12 @@ export default function ScoutPage() {
   // Apply filters
   const filteredPlayers = useMemo(() => {
     return players.filter(player => {
-      if (positionFilter !== 'all' && player.position !== positionFilter) return false
+      if (positionFilter !== 'all') {
+        const candidatePositions = player.positions && player.positions.length > 0
+          ? player.positions
+          : player.position ? [player.position] : []
+        if (!candidatePositions.some(pos => pos === positionFilter)) return false
+      }
       if (countryFilter && !player.country.toLowerCase().includes(countryFilter.toLowerCase())) return false
       if (cityFilter && !player.city.toLowerCase().includes(cityFilter.toLowerCase())) return false
       if (player.trust_score < minTrustScore) return false
@@ -124,7 +131,19 @@ export default function ScoutPage() {
     setCurrentPage(1)
   }
 
-  const positions = ['Вратарь', 'Защитник', 'Полузащитник', 'Нападающий']
+  const positions = [
+    'Вратарь (GK)',
+    'Правый защитник (RB)',
+    'Левый защитник (LB)',
+    'Центральный защитник (CB)',
+    'Опорный полузащитник (CDM)',
+    'Центральный полузащитник (CM)',
+    'Атакующий полузащитник (CAM)',
+    'Правый вингер (RW)',
+    'Левый вингер (LW)',
+    'Второй нападающий (CF)',
+    'Нападающий (ST)'
+  ]
 
   if (loading) {
     return (
@@ -292,12 +311,16 @@ export default function ScoutPage() {
                     {/* Header */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-[#AAFF00] to-[#66FF00] rounded-full flex items-center justify-center font-bold text-black text-lg">
-                          {player.full_name.charAt(0).toUpperCase()}
+                        <div className="w-12 h-12 rounded-full overflow-hidden bg-[#111111] flex items-center justify-center">
+                          {player.avatar_url ? (
+                            <img src={player.avatar_url} alt={player.full_name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="font-bold text-[#AAFF00] text-lg">{player.full_name.charAt(0).toUpperCase()}</span>
+                          )}
                         </div>
                         <div>
                           <p className="font-bold text-white">{player.full_name}</p>
-                          <p className="text-sm text-[#888888]">{player.position}</p>
+                          <p className="text-sm text-[#888888]">{player.positions && player.positions.length > 0 ? player.positions.join(', ') : player.position}</p>
                         </div>
                       </div>
                     </div>

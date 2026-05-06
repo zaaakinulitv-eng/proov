@@ -9,7 +9,9 @@ import { User } from '@supabase/supabase-js'
 interface Profile {
   id: string
   full_name: string
-  position: string
+  avatar_url?: string
+  positions?: string[]
+  position?: string
   city: string
   country: string
   trust_score: number
@@ -181,8 +183,12 @@ export default function PlayerProfile() {
         {/* Profile Header */}
         <div className="text-center mb-16">
           <div className="flex justify-center mb-6">
-            <div className="w-24 h-24 bg-gradient-to-br from-[#AAFF00] to-[#66FF00] rounded-full flex items-center justify-center text-4xl font-black text-black">
-              {profile.full_name.charAt(0).toUpperCase()}
+            <div className="w-24 h-24 rounded-full overflow-hidden bg-[#111111] flex items-center justify-center text-4xl font-black text-black">
+              {profile.avatar_url ? (
+                <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
+              ) : (
+                profile.full_name.charAt(0).toUpperCase()
+              )}
             </div>
           </div>
           {profile.is_founder_verified && (
@@ -194,7 +200,7 @@ export default function PlayerProfile() {
             {profile.full_name}
           </h1>
           <p className="text-xl text-[#888888] font-medium">
-            {profile.position} • {profile.city}, {profile.country}
+            {profile.positions?.join(' • ') || profile.position || 'Игрок'} • {profile.city}, {profile.country}
           </p>
         </div>
 

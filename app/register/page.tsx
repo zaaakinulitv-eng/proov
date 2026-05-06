@@ -5,16 +5,30 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
-const positions = ['Вратарь', 'Защитник', 'Полузащитник', 'Нападающий']
+const positions = [
+  'Вратарь (GK)',
+  'Правый защитник (RB)',
+  'Левый защитник (LB)',
+  'Центральный защитник (CB)',
+  'Опорный полузащитник (CDM)',
+  'Центральный полузащитник (CM)',
+  'Атакующий полузащитник (CAM)',
+  'Правый вингер (RW)',
+  'Левый вингер (LW)',
+  'Второй нападающий (CF)',
+  'Нападающий (ST)'
+]
 
 export default function Register() {
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
     password: '',
-    position: '',
+    positions: [] as string[],
     city: '',
-    country: ''
+    country: '',
+    nationality: '',
+    birth_date: ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -24,10 +38,29 @@ export default function Register() {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
+  const togglePosition = (position: string) => {
+    setFormData(prev => {
+      const selected = prev.positions.includes(position)
+      const nextPositions = selected
+        ? prev.positions.filter(item => item !== position)
+        : prev.positions.length < 3
+        ? [...prev.positions, position]
+        : prev.positions
+
+      return { ...prev, positions: nextPositions }
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
+
+    if (formData.positions.length === 0) {
+      setError('Выберите хотя бы одну позицию')
+      setLoading(false)
+      return
+    }
 
     try {
       const { data, error: authError } = await supabase.auth.signUp({
@@ -43,9 +76,11 @@ export default function Register() {
           .insert({
             id: data.user.id,
             full_name: formData.full_name,
-            position: formData.position,
+            positions: formData.positions,
             city: formData.city,
             country: formData.country,
+            nationality: formData.nationality,
+            birth_date: formData.birth_date,
             trust_score: 0,
             is_founder_verified: false,
           })
@@ -135,19 +170,27 @@ export default function Register() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#AAFF00] mb-2">Позиция</label>
-              <select
-                name="position"
-                value={formData.position}
-                onChange={handleChange}
-                required
-                className="input-field w-full bg-[#111111]"
-              >
-                <option value="">Выберите позицию</option>
-                {positions.map(pos => (
-                  <option key={pos} value={pos}>{pos}</option>
-                ))}
-              </select>
+              <label className="block text-sm font-medium text-[#AAFF00] mb-3">Твои позиции</label>
+              <p className="text-xs text-[#888888] mb-4">Выберите от 1 до 3 позиций</p>
+              <div className="grid grid-cols-2 gap-2">
+                {positions.map(pos => {
+                  const selected = formData.positions.includes(pos)
+                  return (
+                    <button
+                      key={pos}
+                      type="button"
+                      onClick={() => togglePosition(pos)}
+                      className={`rounded-2xl px-3 py-3 text-left text-sm font-medium transition-all border ${
+                        selected
+                          ? 'bg-[#AAFF00] text-black border-transparent'
+                          : 'border-[#333333] text-[#888888] bg-[#111111] hover:border-[#AAFF00] hover:text-white'
+                      }`}
+                    >
+                      {pos}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -170,6 +213,32 @@ export default function Register() {
                   name="country"
                   placeholder="Россия"
                   value={formData.country}
+                  onChange={handleChange}
+                  required
+                  className="input-field w-full"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-[#AAFF00] mb-2">Национальность</label>
+                <input
+                  type="text"
+                  name="nationality"
+                  placeholder="Русский"
+                  value={formData.nationality}
+                  onChange={handleChange}
+                  required
+                  className="input-field w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#AAFF00] mb-2">Дата рождения</label>
+                <input
+                  type="date"
+                  name="birth_date"
+                  value={formData.birth_date}
                   onChange={handleChange}
                   required
                   className="input-field w-full"

@@ -9,9 +9,14 @@ import { User } from '@supabase/supabase-js'
 interface Profile {
   id: string
   full_name: string
-  position: string
+  club?: string
   city: string
   country: string
+  avatar_url?: string
+  positions?: string[]
+  birth_year?: number
+  height?: number
+  strong_foot?: string
   trust_score: number
   is_founder_verified: boolean
 }
@@ -110,6 +115,10 @@ export default function Dashboard() {
   if (parseFloat(assistsPerMatch) > 1) rating += 5
   rating = Math.min(rating, 90)
 
+  const positionText = profile.positions?.join(' • ') || 'Игрок'
+
+  const avatarLetter = profile.full_name.charAt(0).toUpperCase()
+
   return (
     <div className="min-h-screen bg-[#080808] page-enter">
       {/* Header */}
@@ -146,18 +155,32 @@ export default function Dashboard() {
               <span className="tag-verified">⭐ Founder Verified</span>
             </div>
           )}
-          <div className="flex items-start justify-between mb-8">
-            <div>
-              <h2 className="text-4xl font-black mb-2 text-white uppercase tracking-tight">
-                {profile.full_name}
-              </h2>
-              <p className="text-lg text-[#888888] font-medium">
-                {profile.position} • {profile.city}, {profile.country}
-              </p>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#AAFF00] to-[#66FF00] flex items-center justify-center text-3xl font-black text-black">
+                {profile.avatar_url ? (
+                  <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full rounded-full object-cover" />
+                ) : (
+                  avatarLetter
+                )}
+              </div>
+              <div>
+                <h2 className="text-4xl font-black mb-2 text-white uppercase tracking-tight">
+                  {profile.full_name}
+                </h2>
+                <p className="text-lg text-[#888888] font-medium">
+                  {positionText} • {profile.city}, {profile.country}
+                </p>
+              </div>
             </div>
-            <div className="text-right">
-              <div className="text-6xl font-black text-[#AAFF00] count-up">{rating}</div>
-              <p className="text-sm text-[#888888] uppercase tracking-widest font-medium mt-2">Рейтинг</p>
+            <div className="flex items-center gap-3">
+              <Link href="/profile/edit" className="btn-secondary text-sm px-4 py-2 flex items-center gap-2">
+                ✏️ Редактировать профиль
+              </Link>
+              <div className="text-right">
+                <div className="text-6xl font-black text-[#AAFF00] count-up">{rating}</div>
+                <p className="text-sm text-[#888888] uppercase tracking-widest font-medium mt-2">Рейтинг</p>
+              </div>
             </div>
           </div>
 
